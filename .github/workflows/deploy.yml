@@ -1,0 +1,27 @@
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+jobs:
+  tofu-plan-apply:
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    uses: ./.github/workflows/tofu-plan-apply.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        environment:
+          - prod
+          - bootstrap
+    with:
+      environment: ${{ matrix.environment }}
+    secrets:
+      # NOTE: only needed for "bootstrap" environment
+      # TODO: How to do secrets with a matrix?
+      personal_access_token: ${{ secrets.PAT }}
+

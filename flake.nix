@@ -1,31 +1,43 @@
 {
   description = "NixOS Village AWS cloud";
-  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
-  inputs.pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
+  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-  outputs = inputs@{ self, nixpkgs, pre-commit-hooks, ... }: {
+  outputs = inputs@{ self, nixpkgs, ... }: {
     lib.supportedSystems = [ "aarch64-darwin" "aarch64-linux" "x86_64-linux" ];
     lib.forAllSystems = nixpkgs.lib.genAttrs self.lib.supportedSystems;
 
     devShells = self.lib.forAllSystems (system: {
       default = with nixpkgs.legacyPackages.${system};
         mkShell {
-          packages =
-            [ opentofu awscli2 tflint actionlint shellcheck gh ];
-          shellHook = self.checks.${system}.pre-commit-check.shellHook;
+          packages = [
+            opentofu
+            awscli2
+            (tflint.withPlugins (p: [ p.tflint-ruleset-aws ]))
+            actionlint
+            shellcheck
+            infracost
+            gh
+          ];
+          # shellHook = self.checks.${system}.pre-commit-check.shellHook;
         };
     });
 
-    checks = self.lib.forAllSystems (system: {
-      pre-commit-check = pre-commit-hooks.lib.${system}.run {
-        src = ./.;
-        hooks = {
-          actionlint.enable = true;
-          tflint.enable = true;
-          shellcheck.enable = true;
-        };
-      };
-    });
+    hydraJobs = {
+      images = nixpkgs.lib.mapAttrs (name: config: config.system.build.amazonImage) self.nixosConfigurations;
+    };
 
+    nixosConfigurations = let
+      lib = nixpkgs.lib;
+      hosts = builtins.readDir ./nix/hosts;
+      nixosSystem = name: _v:
+        lib.nixosSystem {
+          modules = [
+            "${nixpkgs}/nixos/maintainers/scripts/ec2/amazon-image.nix"
+            { amazonImage.sizeMB = "auto"; }
+            { system.name = name; }
+            ./hosts/${name}
+          ];
+        };
+    in lib.mapAttrs nixosSystem hosts;
   };
 }
