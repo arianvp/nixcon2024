@@ -1,0 +1,69 @@
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - staging
+jobs:
+  bootstrap:
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/tofu-plan-apply.yml
+    with:
+      environment: bootstrap
+      branch: main
+    secrets:
+      personal_access_token: ${{ secrets.PAT }}
+
+  build-website:
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/build-and-push.yml
+    with:
+      aws-region: eu-central-1
+      role-to-assume: ${{ vars.BUILD_ROLE_ARN }}
+      store-uri: ${{ vars.NIX_STORE_URI }}
+      installable: .#hydraJobs.toplevels.website
+    secrets:
+      secret-key: ${{ secrets.NIX_SECRET_KEY }}
+
+
+  
+  # global:
+    # needs: bootstrap
+    # permissions:
+      # contents: read
+      # id-token: write
+    # uses: ./.github/workflows/tofu-plan-apply.yml
+    # with:
+      # environment: global
+      # branch: main
+    # secrets:
+      # personal_access_token: ${{ secrets.PAT }}
+  # environments:
+    # needs: global
+    # permissions:
+      # contents: read
+      # id-token: write
+    # uses: ./.github/workflows/tofu-plan-apply.yml
+    # strategy:
+      # fail-fast: false
+      # matrix:
+        # environment:
+          # - { environment: prod, branch: main }
+    # with:
+      # environment: ${{ matrix.environment.environment }}
+      # branch: ${{ matrix.environment.branch }}
+    # secrets:
+      # personal_access_token: ${{ secrets.PAT }}
+
+
+
+
+
+
+ 

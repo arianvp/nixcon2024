@@ -1,0 +1,51 @@
+on:
+  workflow_call:
+    inputs:
+      autoscaling_group_name:
+        required: true
+        type: string
+      launch_template_name:
+        required: true
+        type: string
+      installable:
+        required: false
+        description: "The nix store path or flake ref to deploy"
+        type: string
+      image_id:
+        required: false
+        description: "The AMI ID to deploy. Exclusive with installable"
+        type: string
+jobs:
+  instance-refresh:
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+      - name: Create launch template version with either installable or image_id
+        id: create-launch-template-version
+        run: |
+          launch_template_version=$(aws ec2 create-launch-template-version \
+            --launch-template-name ${{ inputs.launch_template_name }} \
+            --source-version \$Latest \
+            --launch-template-data ${{ 
+                inputs.installable 
+                && '{"TagSpecifications":[{"ResourceType":"instance","Tags":[{"Key":"Installable","Value":"' + inputs.installable + '"}]}]}' 
+                || '{"ImageId":"' + inputs.image_id + '"}' }} \
+            --output text \
+            --query 'LaunchTemplateVersion.VersionNumber')
+            echo "launch_template_version=$launch_template_version" >> $GITHUB_OUTPUT
+      - name: Start instance refresh
+        run: |
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name ${{ inputs.autoscaling_group_name }} \
+            --strategy Rolling \
+            --preferences SkipMatching=true,AutoRollback=true \
+            --desired-configuration LaunchTemplate={LaunchTemplateName=${{ inputs.launch_template_name }},Version='${{ steps.create-launch-template-version.outputs.launch_template_version }}'}
+      # TODO: Wait for instance refresh to complete
+        

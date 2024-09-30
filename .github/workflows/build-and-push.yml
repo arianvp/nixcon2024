@@ -1,0 +1,60 @@
+on:
+  workflow_call:
+    inputs:
+      installable:
+        required: true
+        type: string
+      store-uri:
+        required: true
+        type: string
+      aws-region:
+        required: true
+        type: string
+      role-to-assume:
+        required: true
+        type: string
+    secrets:
+      secret-key:
+        required: true
+    outputs:
+      store-path: 
+        value: ${{ jobs.build-and-push.outputs.store-path }}
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      store-path: ${{ steps.build-and-push.outputs.store-path }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v14
+      - uses: aws-actions/configure-aws-credentials@v4
+        id: aws
+        with:
+          aws-region: ${{ inputs.aws-region }}
+          role-to-assume: ${{ inputs.role-to-assume }}
+          output-credentials: true
+      # Needed for substitution as that happens by nix-daemon and runs as root
+      - name: Set up aws credentials for nix-daemon
+        run: |
+          sudo aws configure set aws_access_key_id ${{ steps.aws.outputs.aws-access-key-id }}
+          sudo aws configure set aws_secret_access_key ${{ steps.aws.outputs.aws-secret-access-key }}
+          sudo aws configure set aws_session_token ${{ steps.aws.outputs.aws-session-token }}
+          sudo aws configure set region eu-central-1
+      - id: get-cache-secret-key
+        name: Get cache secret key
+        run: |
+          secret_key_file=$(mktemp)
+          echo "${{ secrets.secret-key }}" > "$secret_key_file"
+          echo "secret-key-file=$secret_key_file" >> "$GITHUB_OUTPUT"
+      - id: build-and-push
+        name: Build
+        run: |
+          store="${{ inputs.store-uri }}&secret-key=${{ steps.get-cache-secret-key.outputs.secret-key-file }}"
+          if ! nix path-info --eval-store auto --store "$store" ${{ inputs.installable }}; then
+            nix copy --eval-store auto --to "$store" ${{ inputs.installable }}
+          fi
+          store_path=$(nix path-info --eval-store auto --store "$store" ${{ inputs.installable }})
+          echo "store-path=$store_path" >> "$GITHUB_OUTPUT"

@@ -1,0 +1,38 @@
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: eu-central-1
+          role-to-assume: arn:aws:iam::123456789012:role/DeployRole
+      # Needed for substitution as that happens by nix-daemon and runs as root
+      - name: Set up aws credentials for nix-daemon
+        run: |
+          sudo aws configure set aws_access_key_id ${{ steps.aws.outputs.aws-access-key-id }}
+          sudo aws configure set aws_secret_access_key ${{ steps.aws.outputs.aws-secret-access-key }}
+          sudo aws configure set aws_session_token ${{ steps.aws.outputs.aws-session-token }}
+          sudo aws configure set region eu-central-1
+      - run: |
+          nix build .#hydraJobs.website
+          nix sign ./result
+          nix copy --to ${{ }}
+      - run: |
+          aws ec2 create-launch-template-version \
+            --launch-template-name website \
+            --source-version '$Default'\
+            --launch-template-data <<EOF
+          {
+            "TagSpecifications": [
+              {
+                "ResourceType": "instance",
+                "Tags": [ { "Key": "Installable", "Value": "$nix_store_path" } ]
+              }
+            ]
+          }
+          EOF

@@ -1,0 +1,75 @@
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      branch:
+        required: true
+        type: string
+    secrets:
+      # NOTE: Needed until octo-sts fixes https://github.com/octo-sts/app/issues/557
+      personal_access_token:
+        required: true
+jobs:
+  plan:
+    defaults:
+      run:
+        working-directory: infra/environments/${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      exitcode: ${{ steps.plan.outputs.exitcode }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+      # - uses: octo-sts/action@6177b4481c00308b3839969c3eca88c96a91775f # v1.0.0
+      #   id: octo-sts
+      #   with:
+      #     scope: arianvp/nixcon2024
+      #     identity: plan
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.PLAN_ROLE_ARN }}
+          aws-region: eu-central-1
+      - run: tofu init
+      - run: tofu validate
+      - id: plan
+        run: tofu plan -detailed-exitcode -out=tfplan
+        env:
+          GITHUB_TOKEN: ${{ secrets.personal_access_token }}
+          # GITHUB_TOKEN: ${{ steps.octo-sts.outputs.token }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.environment }}-tfplan
+          path: infra/environments//${{ inputs.environment }}/tfplan
+  apply:
+    needs: plan
+    if: github.event_name == 'push' && needs.plan.outputs.exitcode == 2
+    defaults:
+      run:
+        working-directory: infra/environments/${{ inputs.environment }}
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.environment }}-tfplan
+          path: infra/environments//${{ inputs.environment }}
+      - uses: opentofu/setup-opentofu@v1
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1 # NOTE: terraform itself still can set other region
+      - run: tofu init
+      - run: tofu apply -auto-approve tfplan
+        env:
+          GITHUB_TOKEN: ${{ secrets.personal_access_token }}
+          # GITHUB_TOKEN: ${{ steps.octo-sts.outputs.token }}
