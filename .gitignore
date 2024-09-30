@@ -1,0 +1,10 @@
+terraform.tfstate*
+.direnv
+.terraform
+result*
+cache.key
+plan.out
+.vscode
+*.key
+.data
+.pre-commit-config.yaml

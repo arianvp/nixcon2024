@@ -1,0 +1,16 @@
+[sso-session nixos-village]
+sso_start_url = https://nixos-village.awsapps.com/start
+sso_region = us-east-1
+sso_registration_scopes = sso:account:access
+
+[profile default]
+sso_session = nixos-village
+sso_account_id = 686862074153
+sso_role_name = AdministratorAccess
+output = yaml
+region = eu-central-1
+
+[profile deploy]
+source_profile = default
+role_arn = arn:aws:iam::686862074153:role/deploy
+region = eu-central-1
