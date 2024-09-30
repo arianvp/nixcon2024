@@ -1,0 +1,16 @@
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    uses: ./.github/workflows/tofu-plan-apply.yml
+    strategy:
+      matrix:
+        environment:
+          - prod
+    with:
+      environment: ${{ matrix.environment }}

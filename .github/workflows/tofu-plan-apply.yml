@@ -1,0 +1,56 @@
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+defaults:
+  run:
+    working-directory: infra/${{ inputs.environment }}
+jobs:
+  plan:
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    outputs:
+      exitcode: ${{ steps.plan.outputs.exitcode }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v12
+      - uses: opentofu/setup-opentofu@v1
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.PLAN_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: tofu init
+      - run: tofu validate
+      - id: plan
+        run: tofu plan -out=tfplan
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: tfplan
+  apply:
+    if: github.event_name == 'push' && needs.plan.outputs.exitcode == 2
+    environment: prod
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    needs: plan
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+      - uses: opentofu/setup-opentofu@v1
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.APPLY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: tofu init
+      - run: tofu apply -auto-approve tfplan
