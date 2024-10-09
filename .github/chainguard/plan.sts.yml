@@ -1,0 +1,4 @@
+issuer: https://tokens.actions.githubusercontent.com
+subject_pattern: repo:arianvp\/nixcon2024:(pull_request|ref:refs\/heads\/main)
+permissions:
+  environments: read

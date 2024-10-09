@@ -19,6 +19,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: opentofu/setup-opentofu@v1
+      - uses: octo-sts/action@6177b4481c00308b3839969c3eca88c96a91775f # v1.0.0
+        id: octo-sts
+        with:
+          scope: arianvp/nixcon2024
+          identity: plan
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.PLAN_ROLE_ARN }}
@@ -27,6 +32,9 @@ jobs:
       - run: tofu validate
       - id: plan
         run: tofu plan -out=tfplan
+        env:
+          GITHUB_TOKEN: ${{ steps.octo-sts.outputs.token }}
+          
       - uses: actions/upload-artifact@v4
         with:
           name: tfplan

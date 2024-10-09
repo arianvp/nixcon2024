@@ -17,6 +17,7 @@ jobs:
       matrix:
         environment:
           - prod
-          - bootstrap
+          # TODO: Need to figure out github permissions 
+          # - bootstrap
     with:
       environment: ${{ matrix.environment }}
