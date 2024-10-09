@@ -30,7 +30,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: tfplan
-          path: ./tfplan
+          path: infra/${{ inputs.environment }}/tfplan
   apply:
     if: github.event_name == 'push' && needs.plan.outputs.exitcode == 2
     defaults:

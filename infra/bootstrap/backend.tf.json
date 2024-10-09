@@ -1,0 +1,1 @@
+{"terraform":{"backend":{"s3":{"bucket":"tfstate20241009214005805300000001","dynamodb_table":"tflock","key":"bootstrap/terraform.tfstate","region":"eu-central-1"}}}}

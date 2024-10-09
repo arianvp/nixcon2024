@@ -132,3 +132,15 @@ module "prod_environment" {
 
   depends_on = [aws_iam_openid_connect_provider.github_actions]
 }
+
+module "bootstrap_environment" {
+  source                           = "../modules/github_environment"
+  name                             = "bootstrap"
+  github_owner                     = var.github_owner
+  github_repository                = var.github_repository
+  deployment_policy_branch_pattern = "main"
+  state_bucket                     = aws_s3_bucket.tfstate
+  lock_table                       = aws_dynamodb_table.tflock
+
+  depends_on = [aws_iam_openid_connect_provider.github_actions]
+}
