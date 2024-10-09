@@ -118,7 +118,12 @@ resource "aws_iam_role_policy_attachment" "plan_read_only_access" {
 resource "github_actions_variable" "plan_role_arn" {
   repository    = var.github_repository
   variable_name = "PLAN_ROLE_ARN"
-  value         = aws_iam_role.plan.arn 
+  value         = aws_iam_role.plan.arn
+}
+
+resource "github_app_installation_repository" "octo_sts" {
+  installation_id = 628387
+  repository      = var.github_repository
 }
 
 module "prod_environment" {

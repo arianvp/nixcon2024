@@ -40,7 +40,7 @@ jobs:
           name: tfplan
           path: infra/${{ inputs.environment }}/tfplan
   apply:
-    if: github.event_name == 'push' && needs.plan.outputs.exitcode == 2
+    if: false && github.event_name == 'push' && needs.plan.outputs.exitcode == 2
     defaults:
       run:
         working-directory: infra/${{ inputs.environment }}
