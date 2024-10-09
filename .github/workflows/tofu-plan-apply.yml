@@ -6,7 +6,6 @@ on:
         type: string
 jobs:
   plan:
-    environment: ${{ inputs.environment }}
     defaults:
       run:
         working-directory: infra/${{ inputs.environment }}
