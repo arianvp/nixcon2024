@@ -46,6 +46,79 @@ resource "aws_dynamodb_table" "tflock" {
   }
 }
 
+data "aws_caller_identity" "this" {}
+
+resource "aws_iam_role" "plan" {
+  name = "github-actions-plan"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = "sts:AssumeRole",
+        Principal = {
+          AWS = data.aws_caller_identity.this.arn
+        }
+      },
+      {
+        Effect = "Allow",
+        Action = "sts:AssumeRoleWithWebIdentity",
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.github_actions.arn
+        },
+        Condition = {
+          StringEquals = {
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:${var.github_owner}/${var.github_repository}:pull_request",
+              "repo:${var.github_owner}/${var.github_repository}:ref:refs/heads/main"
+            ]
+          }
+        }
+      }
+    ],
+  })
+}
+
+resource "aws_iam_policy" "get_state" {
+  name = "github-actions-get-state"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:GetObject",
+        ],
+        Resource = "${aws_s3_bucket.tfstate.arn}/${var.github_repository}/*/terraform.tfstate",
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "dynamodb:DescribeTable",
+          "dynamodb:GetItem",
+        ],
+        Resource = aws_dynamodb_table.tflock.arn,
+      },
+    ],
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "plan_get_state" {
+  role       = aws_iam_role.plan.name
+  policy_arn = aws_iam_policy.get_state.arn
+}
+
+resource "aws_iam_role_policy_attachment" "plan_read_only_access" {
+  role       = aws_iam_role.plan.name
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+}
+
+resource "github_actions_variable" "plan_role_arn" {
+  repository    = var.github_repository
+  variable_name = "PLAN_ROLE_ARN"
+  value         = aws_iam_role.plan.arn
+}
+
 module "prod_environment" {
   source                           = "../modules/github_environment"
   name                             = "prod"

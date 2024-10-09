@@ -19,7 +19,9 @@ data "aws_iam_openid_connect_provider" "github_actions" {
 
 data "aws_caller_identity" "this" {}
 
-resource "aws_iam_role" "this" {
+
+
+resource "aws_iam_role" "deploy" {
   name = "github-actions-deploy-${var.name}"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -27,7 +29,7 @@ resource "aws_iam_role" "this" {
       {
         Effect = "Allow",
         Action = "sts:AssumeRole",
-        Prinicipal = {
+        Principal = {
           AWS = data.aws_caller_identity.this.arn
         }
       },
@@ -46,9 +48,9 @@ resource "aws_iam_role" "this" {
   })
 }
 
-resource "aws_iam_role_policy" "this" {
+resource "aws_iam_role_policy" "apply" {
   name = "github-actions-deploy-${var.name}"
-  role = aws_iam_role.this.id
+  role = aws_iam_role.deploy.id
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
@@ -75,11 +77,11 @@ resource "aws_iam_role_policy" "this" {
   })
 }
 
-resource "github_actions_environment_variable" "this" {
+resource "github_actions_environment_variable" "deploy" {
   repository    = var.github_repository
   environment   = github_repository_environment.this.environment
-  variable_name = "AWS_ROLE_ARN"
-  value         = aws_iam_role.this.arn
+  variable_name = "AWS_DEPLOY_ROLE_ARN"
+  value         = aws_iam_role.deploy.arn
 }
 
 resource "local_file" "backend" {
@@ -96,8 +98,4 @@ resource "local_file" "backend" {
     }
   })
   filename = "${path.root}/../${var.name}/backend.tf.json"
-}
-
-output "role" {
-  value = aws_iam_role.this
 }
