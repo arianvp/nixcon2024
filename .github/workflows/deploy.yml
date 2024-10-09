@@ -16,5 +16,6 @@ jobs:
       matrix:
         environment:
           - prod
+          - bootstrap
     with:
       environment: ${{ matrix.environment }}
