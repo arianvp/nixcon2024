@@ -4,12 +4,12 @@ on:
       environment:
         required: true
         type: string
-defaults:
-  run:
-    working-directory: infra/${{ inputs.environment }}
 jobs:
   plan:
     environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        working-directory: infra/${{ inputs.environment }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -35,6 +35,9 @@ jobs:
           path: tfplan
   apply:
     if: github.event_name == 'push' && needs.plan.outputs.exitcode == 2
+    defaults:
+      run:
+        working-directory: infra/${{ inputs.environment }}
     environment: prod
     runs-on: ubuntu-latest
     permissions:
