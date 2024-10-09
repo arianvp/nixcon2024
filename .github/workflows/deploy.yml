@@ -13,6 +13,7 @@ jobs:
       pull-requests: write
     uses: ./.github/workflows/tofu-plan-apply.yml
     strategy:
+      fail-fast: false
       matrix:
         environment:
           - prod
