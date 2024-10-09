@@ -96,6 +96,8 @@ resource "aws_iam_policy" "get_state" {
         Action = [
           "dynamodb:DescribeTable",
           "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
         ],
         Resource = aws_dynamodb_table.tflock.arn,
       },
@@ -116,7 +118,7 @@ resource "aws_iam_role_policy_attachment" "plan_read_only_access" {
 resource "github_actions_variable" "plan_role_arn" {
   repository    = var.github_repository
   variable_name = "PLAN_ROLE_ARN"
-  value         = aws_iam_role.plan.arn
+  value         = aws_iam_role.plan.arn 
 }
 
 module "prod_environment" {
