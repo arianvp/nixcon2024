@@ -1,3 +1,10 @@
+variable "oidc_provider" {
+  description = "The OIDC provider for GitHub Actions"
+  type        = object({
+    arn = string
+    url = string
+  })
+}
 variable "name" {
   description = "The name of the environment"
   type        = string

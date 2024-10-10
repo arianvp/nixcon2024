@@ -136,8 +136,7 @@ module "prod_environment" {
   deployment_policy_branch_pattern = "main"
   state_bucket                     = aws_s3_bucket.tfstate
   lock_table                       = aws_dynamodb_table.tflock
-
-  depends_on = [aws_iam_openid_connect_provider.github_actions]
+  oidc_provider = aws_iam_openid_connect_provider.github_actions
 }
 
 module "bootstrap_environment" {
@@ -148,6 +147,5 @@ module "bootstrap_environment" {
   deployment_policy_branch_pattern = "main"
   state_bucket                     = aws_s3_bucket.tfstate
   lock_table                       = aws_dynamodb_table.tflock
-
-  depends_on = [aws_iam_openid_connect_provider.github_actions]
+  oidc_provider = aws_iam_openid_connect_provider.github_actions
 }

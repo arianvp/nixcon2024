@@ -13,10 +13,6 @@ resource "github_repository_environment_deployment_policy" "this" {
   branch_pattern = "main"
 }
 
-data "aws_iam_openid_connect_provider" "github_actions" {
-  url = "https://token.actions.githubusercontent.com"
-}
-
 data "aws_caller_identity" "this" {}
 
 
@@ -37,11 +33,11 @@ resource "aws_iam_role" "deploy" {
         Effect = "Allow",
         Action = "sts:AssumeRoleWithWebIdentity",
         Principal = {
-          Federated = data.aws_iam_openid_connect_provider.github_actions.arn
+          Federated = var.oidc_provider.arn
         },
         Condition = {
           StringEquals = {
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_owner}/${var.github_repository}:environment:${var.name}"
+            "${var.oidc_provider.url}:sub" = "repo:${var.github_owner}/${var.github_repository}:environment:${var.name}"
           }
         }
     }],
