@@ -36,6 +36,13 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "tfstate" {
   }
 }
 
+resource "aws_s3_bucket_versioning" "tfstate" {
+  bucket = aws_s3_bucket.tfstate.bucket
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_dynamodb_table" "tflock" {
   name         = "tflock"
   billing_mode = "PAY_PER_REQUEST"
@@ -119,11 +126,6 @@ resource "github_actions_variable" "plan_role_arn" {
   repository    = var.github_repository
   variable_name = "PLAN_ROLE_ARN"
   value         = aws_iam_role.plan.arn
-}
-
-resource "github_app_installation_repository" "octo_sts" {
-  installation_id = 628387
-  repository      = var.github_repository
 }
 
 module "prod_environment" {
