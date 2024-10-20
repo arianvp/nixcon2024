@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - staging
 jobs:
   bootstrap:
     permissions:
@@ -15,6 +14,25 @@ jobs:
     with:
       environment: bootstrap
       branch: main
+    secrets:
+      personal_access_token: ${{ secrets.PAT }}
+  environments:
+    needs: bootstrap
+    strategy:
+      fail-fast: true
+      matrix:
+        environment:
+          - environment: prod,
+            branch: main
+          - environment: global
+            branch: main
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/tofu-plan-apply.yml
+    with:
+      environment: ${{ matrix.environment.environment }}
+      branch: ${{ matrix.environment.branch }}
     secrets:
       personal_access_token: ${{ secrets.PAT }}
 
@@ -36,36 +54,6 @@ jobs:
       installable: .#hydraJobs.toplevels.${{ matrix.hosts }}
     secrets:
       secret-key: ${{ secrets.NIX_SECRET_KEY }}
-
-
-  
-  # global:
-    # needs: bootstrap
-    # permissions:
-      # contents: read
-      # id-token: write
-    # uses: ./.github/workflows/tofu-plan-apply.yml
-    # with:
-      # environment: global
-      # branch: main
-    # secrets:
-      # personal_access_token: ${{ secrets.PAT }}
-  # environments:
-    # needs: global
-    # permissions:
-      # contents: read
-      # id-token: write
-    # uses: ./.github/workflows/tofu-plan-apply.yml
-    # strategy:
-      # fail-fast: false
-      # matrix:
-        # environment:
-          # - { environment: prod, branch: main }
-    # with:
-      # environment: ${{ matrix.environment.environment }}
-      # branch: ${{ matrix.environment.branch }}
-    # secrets:
-      # personal_access_token: ${{ secrets.PAT }}
 
 
 
