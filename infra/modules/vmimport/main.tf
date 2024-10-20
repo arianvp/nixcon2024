@@ -51,7 +51,7 @@ resource "aws_iam_role_policy" "vmimport" {
 }
 
 resource "aws_iam_policy" "write" {
-  name        = "vmimport-write"
+  name = "vmimport-write"
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -59,8 +59,51 @@ resource "aws_iam_policy" "write" {
         Effect = "Allow"
         Action = [
           "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject",
         ]
         Resource = ["${aws_s3_bucket.vmimport.arn}/*"]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket",
+          "s3:GetBucketLocation",
+        ]
+        Resource = [aws_s3_bucket.vmimport.arn]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:ImportSnapshot",
+          "ec2:DescribeImportSnapshotTasks",
+          "ec2:DescribeSnapshots",
+          "ec2:DeleteSnapshot",
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = ["ec2:CreateTags"],
+        Resource = [
+          "arn:aws:ec2:*:*:snapshot/*",
+          "arn:aws:ec2:*:*:image/*",
+          "arn:aws:ec2:*:*:import-snapshot-task/*"
+        ]
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "ec2:DescribeImages",
+          "ec2:RegisterImage",
+          "ec2:DeregisterImage",
+          "ec2:DescribeRegions",
+          "ec2:CopyImage",
+          "ec2:ModifyImageAttribute",
+          "ec2:DisableImageBlockPublicAccess",
+          "ec2:EnableImageDeprecation"
+        ]
+        Resource = "*"
       }
     ]
   })

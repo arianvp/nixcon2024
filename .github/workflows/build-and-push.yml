@@ -71,6 +71,7 @@ jobs:
       - if: ${{ inputs.vmimport-bucket }}
         name: Register AMI
         run: |
+          set -euo pipefail
           image_id=$(nix run github:NixOS/amis#upload-ami -- \
             --s3-bucket "${{ inputs.vmimport-bucket }}" \
             --prefix "${{ inputs.image-name }}" \
