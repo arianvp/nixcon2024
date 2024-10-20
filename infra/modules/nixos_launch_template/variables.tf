@@ -5,6 +5,7 @@ variable "name" {
 variable "trusted_public_keys" {
   type        = string
   description = "The public keys to use for substitution"
+  default     = null
 }
 
 variable "nix_cache" {
@@ -18,6 +19,7 @@ variable "nix_cache" {
 variable "substituters" {
   type        = string
   description = "The substituters to trust"
+  default     = null
 }
 
 variable "installable" {

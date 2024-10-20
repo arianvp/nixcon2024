@@ -61,11 +61,11 @@ resource "aws_launch_template" "this" {
 
   tag_specifications {
     resource_type = "instance"
-    tags = {
-      # Installable       = var.installable
-      TrustedPublicKeys = var.trusted_public_keys
-      Substituters      = var.substituters
-    }
+    tags = merge(
+      var.installable != null ? { Installable = var.installable } : {},
+      var.trusted_public_keys != null ? { TrustedPublicKeys = var.trusted_public_keys } : {},
+      var.substituters != null ? { Substituters = var.substituters } : {},
+    )
   }
 }
 

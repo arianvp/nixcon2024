@@ -2,13 +2,13 @@
 module "launch_template" {
   source = "../nixos_launch_template"
 
-  name                = var.name
-  vpc_id              = var.vpc_id
-  security_group_ids  = setunion(var.security_group_ids, [aws_security_group.website.id])
-  instance_type       = var.instance_type
-  architecture        = var.architecture
-  nix_cache           = var.nix_cache
-  key_name            = var.key_name
+  name               = var.name
+  vpc_id             = var.vpc_id
+  security_group_ids = setunion(var.security_group_ids, [aws_security_group.website.id])
+  instance_type      = var.instance_type
+  architecture       = var.architecture
+  nix_cache          = var.nix_cache
+  key_name           = var.key_name
 
   # TODO: Set
   trusted_public_keys = ""
@@ -100,20 +100,20 @@ resource "aws_lb_target_group" "website" {
 }
 
 resource "aws_autoscaling_group" "website" {
-  name = "website"
-
-  min_size         = 1
-  max_size         = 3
-  desired_capacity = 0
+  name                = "website"
+  min_size            = 0
+  max_size            = 3
+  desired_capacity    = 0
+  vpc_zone_identifier = var.private_subnets
 
   # Makes sure to use the ELB health check for rollout
   # health_check_type = "ELB"
+
   instance_maintenance_policy {
     max_healthy_percentage = 200
     min_healthy_percentage = 100
   }
 
-  vpc_zone_identifier = var.private_subnets
   launch_template {
     id = module.launch_template.launch_template.id
   }
