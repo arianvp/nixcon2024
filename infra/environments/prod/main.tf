@@ -45,8 +45,8 @@ resource "aws_vpc_security_group_ingress_rule" "ingress_eice" {
 resource "aws_vpc_security_group_ingress_rule" "ingress_prometheus_node_exporter" {
   security_group_id            = aws_security_group.instance.id
   referenced_security_group_id = aws_security_group.prometheus.id
-  from_port                    = 9090
-  to_port                      = 9090
+  from_port                    = 9100
+  to_port                      = 9100
   ip_protocol                  = "tcp" 
 }
 

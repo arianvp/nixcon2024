@@ -17,7 +17,7 @@ on:
       secret-key:
         required: true
     outputs:
-      store-path: 
+      store-path:
         value: ${{ jobs.build-and-push.outputs.store-path }}
 jobs:
   build-and-push:
@@ -52,9 +52,10 @@ jobs:
       - id: build-and-push
         name: Build
         run: |
-          store="${{ inputs.store-uri }}&secret-key=${{ steps.get-cache-secret-key.outputs.secret-key-file }}"
-          if ! nix path-info --eval-store auto --store "$store" ${{ inputs.installable }}; then
-            nix copy --eval-store auto --to "$store" ${{ inputs.installable }}
+          if ! nix path-info --eval-store auto --store "${{ inputs.store-uri }}" ${{ inputs.installable }}; then
+            nix build ${{ inputs.installable }}
+            nix store sign --recursive --key-file ${{ steps.get-cache-secret-key.outputs.secret-key-file }}  ${{ inputs.installable }}
+            nix copy --eval-store auto --to "${{ inputs.store-uri }}" ${{ inputs.installable }}
           fi
-          store_path=$(nix path-info --eval-store auto --store "$store" ${{ inputs.installable }})
+          store_path=$(nix path-info --eval-store auto --store "${{ inputs.store-uri }}" ${{ inputs.installable }})
           echo "store-path=$store_path" >> "$GITHUB_OUTPUT"
