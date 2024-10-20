@@ -69,6 +69,7 @@ jobs:
           store_path=$(nix path-info --eval-store auto --store "${{ inputs.store-uri }}" ${{ inputs.installable }})
           echo "store-path=$store_path" >> "$GITHUB_OUTPUT"
       - if: ${{ inputs.vmimport-bucket }}
+        id: register-ami
         name: Register AMI
         run: |
           set -euo pipefail
