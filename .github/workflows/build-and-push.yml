@@ -13,8 +13,10 @@ on:
       role-to-assume:
         required: true
         type: string
+      image-name:
+        required: false
+        type: string
       vmimport-bucket:
-        description: "If set, will try to register the build as an AMI"
         required: false
         type: string
     secrets:
@@ -71,5 +73,6 @@ jobs:
         run: |
           image_id=$(nix run github:NixOS/amis#upload-ami -- \
             --s3-bucket "${{ inputs.vmimport-bucket }}" \
-            --image-info ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json | jq -r '.[${{ inputs.aws-region }}]')
+            --prefix "${{ inputs.image-name }}" \
+            --image-info ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json | jq -r '.["${{ inputs.aws-region }}"]')
           echo "image-id=$image_id" >> "$GITHUB_OUTPUT"
