@@ -61,19 +61,16 @@ jobs:
       - id: build-and-push
         name: Build
         run: |
-          if ! nix path-info --eval-store auto --store "${{ inputs.store-uri }}" ${{ inputs.installable }}; then
-            nix build ${{ inputs.installable }}
-            nix store sign --recursive --key-file ${{ steps.get-cache-secret-key.outputs.secret-key-file }}  ${{ inputs.installable }}
-            nix copy --eval-store auto --to "${{ inputs.store-uri }}" ${{ inputs.installable }}
-          fi
+          # if ! nix path-info --eval-store auto --store "${{ inputs.store-uri }}" ${{ inputs.installable }}; then
+          nix build ${{ inputs.installable }}
+          nix store sign --recursive --key-file ${{ steps.get-cache-secret-key.outputs.secret-key-file }}  ${{ inputs.installable }}
+          nix copy --eval-store auto --to "${{ inputs.store-uri }}" ${{ inputs.installable }}
+          # fi
           store_path=$(nix path-info --eval-store auto --store "${{ inputs.store-uri }}" ${{ inputs.installable }})
           echo "store-path=$store_path" >> "$GITHUB_OUTPUT"
       - if: ${{ inputs.vmimport-bucket }}
         name: Register AMI
-        id: register-ami
         run: |
-          set -euo pipefail
-          ls -l ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json
           image_id=$(nix run github:NixOS/amis#upload-ami -- \
             --s3-bucket "${{ inputs.vmimport-bucket }}" \
             --prefix "${{ inputs.image-name }}" \
