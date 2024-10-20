@@ -29,16 +29,16 @@
 
     nixosConfigurations = let
       lib = nixpkgs.lib;
-      hosts = builtins.readDir ./nix/hosts;
+      hosts = builtins.trace "lol" (builtins.readDir ./nix/hosts);
       nixosSystem = name: _v:
-        lib.nixosSystem {
+        builtins.trace "huh" (lib.nixosSystem {
           modules = [
             "${nixpkgs}/nixos/maintainers/scripts/ec2/amazon-image.nix"
             { amazonImage.sizeMB = "auto"; }
             { system.name = name; }
             ./hosts/${name}
           ];
-        };
+        });
     in lib.mapAttrs nixosSystem hosts;
   };
 }
