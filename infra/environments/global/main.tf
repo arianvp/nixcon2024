@@ -48,6 +48,12 @@ resource "aws_iam_role_policy_attachment" "build_write_vmimport" {
   policy_arn = module.vmimport.write_policy_arn 
 }
 
+resource "github_actions_variable" "VMIMPORT_BUCKET" {
+  repository    = var.github_repository
+  variable_name = "VMIMPORT_BUCKET"
+  value         = module.vmimport.bucket 
+}
+
 resource "github_actions_variable" "BUILD_ROLE_ARN" {
   repository    = var.github_repository
   variable_name = "BUILD_ROLE_ARN"

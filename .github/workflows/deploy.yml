@@ -54,6 +54,30 @@ jobs:
       installable: .#hydraJobs.toplevels.${{ matrix.hosts }}
     secrets:
       secret-key: ${{ secrets.NIX_SECRET_KEY }}
+  
+  build-and-upload-image:
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/build-and-push.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        hosts:
+          - website
+          - prometheus
+    with:
+      aws-region: eu-central-1
+      role-to-assume: ${{ vars.BUILD_ROLE_ARN }}
+      store-uri: ${{ vars.NIX_STORE_URI }}
+      installable: .#hydraJobs.images.${{ matrix.hosts }}
+      vmimport-bucket: ${{ vars.VMIMPORT_BUCKET }}
+    secrets:
+      secret-key: ${{ secrets.NIX_SECRET_KEY }}
+  
+
+    
+    
 
 
 

@@ -67,8 +67,8 @@ module "website" {
   source = "../../modules/website"
   name               = "website-prod"
   nix_cache          = data.terraform_remote_state.global.outputs.nix_cache
-  instance_type      = "t4g.small"
-  architecture       = "arm64"
+  instance_type      = "t3a.small"
+  architecture       = "x86_64"
   key_name           = "framework"
   vpc_id             = module.vpc.id
   security_group_ids = [aws_security_group.instance.id]

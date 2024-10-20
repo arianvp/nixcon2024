@@ -13,12 +13,18 @@ on:
       role-to-assume:
         required: true
         type: string
+      vmimport-bucket:
+        description: "If set, will try to register the build as an AMI"
+        required: false
+        type: string
     secrets:
       secret-key:
         required: true
     outputs:
       store-path:
         value: ${{ jobs.build-and-push.outputs.store-path }}
+      image-id:
+        value: ${{ jobs.build-and-push.outputs.image-id }}
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -27,6 +33,7 @@ jobs:
       id-token: write
     outputs:
       store-path: ${{ steps.build-and-push.outputs.store-path }}
+      image-id: ${{ steps.register-ami.outputs.image-id }}
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v14
@@ -59,3 +66,10 @@ jobs:
           fi
           store_path=$(nix path-info --eval-store auto --store "${{ inputs.store-uri }}" ${{ inputs.installable }})
           echo "store-path=$store_path" >> "$GITHUB_OUTPUT"
+      - if: ${{ inputs.vmimport-bucket }}
+        name: Register AMI
+        run: |
+          image_id=$(nix run github:NixOS/amis#upload-ami -- \
+            --s3-bucket "${{ inputs.vmimport-bucket }}" \
+            --image-info ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json | jq -r '.[${{ inputs.aws-region }}]')
+          echo "image-id=$image_id" >> "$GITHUB_OUTPUT"
