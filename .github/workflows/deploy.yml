@@ -71,6 +71,7 @@ jobs:
       role-to-assume: ${{ vars.BUILD_ROLE_ARN }}
       store-uri: ${{ vars.NIX_STORE_URI }}
       installable: .#hydraJobs.images.${{ matrix.hosts }}
+      image-name: ${{ matrix.hosts }}
       vmimport-bucket: ${{ vars.VMIMPORT_BUCKET }}
     secrets:
       secret-key: ${{ secrets.NIX_SECRET_KEY }}
