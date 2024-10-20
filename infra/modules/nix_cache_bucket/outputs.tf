@@ -11,7 +11,7 @@ output "region" {
 }
 
 output "store_uri" {
-  value = "s3://${aws_s3_bucket.this.bucket}?region=${aws_s3_bucket.this.region}"
+  value = "s3://${aws_s3_bucket.this.bucket}?region=${aws_s3_bucket.this.region}&compression=zstd"
 }
 
 output "write_policy_name" {

@@ -50,6 +50,26 @@ resource "aws_iam_role_policy" "vmimport" {
   })
 }
 
+resource "aws_iam_policy" "write" {
+  name        = "vmimport-write"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+        ]
+        Resource = ["${aws_s3_bucket.vmimport.arn}/*"]
+      }
+    ]
+  })
+}
+
 output "bucket" {
   value = aws_s3_bucket.vmimport.bucket
+}
+
+output "write_policy_arn" {
+  value = aws_iam_policy.write.arn
 }
