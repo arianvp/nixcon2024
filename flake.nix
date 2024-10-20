@@ -23,22 +23,22 @@
     });
 
     hydraJobs = {
-      toplevels = nixpkgs.lib.mapAttrs (name: config: config.system.build.toplevel) self.nixosConfigurations;
-      images = nixpkgs.lib.mapAttrs (name: config: config.system.build.amazonImage) self.nixosConfigurations;
+      toplevels = nixpkgs.lib.mapAttrs (name: config: config.config.system.build.toplevel) self.nixosConfigurations;
+      images = nixpkgs.lib.mapAttrs (name: config: config.config.system.build.amazonImage) self.nixosConfigurations;
     };
 
     nixosConfigurations = let
       lib = nixpkgs.lib;
-      hosts = builtins.trace "lol" (builtins.readDir ./nix/hosts);
+      hosts = builtins.readDir ./nix/hosts;
       nixosSystem = name: _v:
-        builtins.trace "huh" (lib.nixosSystem {
+        lib.nixosSystem {
           modules = [
             "${nixpkgs}/nixos/maintainers/scripts/ec2/amazon-image.nix"
             { amazonImage.sizeMB = "auto"; }
             { system.name = name; }
-            ./hosts/${name}
+            ./nix/hosts/${name}
           ];
-        });
+        };
     in lib.mapAttrs nixosSystem hosts;
   };
 }
