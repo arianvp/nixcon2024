@@ -22,7 +22,7 @@ jobs:
       fail-fast: true
       matrix:
         environment:
-          - environment: prod,
+          - environment: prod
             branch: main
           - environment: global
             branch: main
