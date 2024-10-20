@@ -2,13 +2,17 @@
 module "launch_template" {
   source = "../nixos_launch_template"
 
-  name               = var.name
-  vpc_id             = var.vpc_id
-  security_group_ids = setunion(var.security_group_ids, [aws_security_group.website.id])
-  instance_type      = var.instance_type
-  architecture       = var.architecture
-  nix_cache          = var.nix_cache
-  key_name           = var.key_name
+  name                = var.name
+  vpc_id              = var.vpc_id
+  security_group_ids  = setunion(var.security_group_ids, [aws_security_group.website.id])
+  instance_type       = var.instance_type
+  architecture        = var.architecture
+  nix_cache           = var.nix_cache
+  key_name            = var.key_name
+
+  # TODO: Set
+  trusted_public_keys = ""
+  substituters        = ""
 }
 
 output "launch_template" {
@@ -106,7 +110,7 @@ resource "aws_autoscaling_group" "website" {
   # health_check_type = "ELB"
   instance_maintenance_policy {
     max_healthy_percentage = 200
-    min_healthy_percentage = 90
+    min_healthy_percentage = 100
   }
 
   vpc_zone_identifier = var.private_subnets

@@ -1,5 +1,5 @@
 {
-  servces.prometheus = {
+  services.prometheus = {
     enable = true;
     globalConfigs.scrape_interval = "15s";
     scrapeConfigs = [{

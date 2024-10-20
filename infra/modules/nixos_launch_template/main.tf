@@ -62,7 +62,7 @@ resource "aws_launch_template" "this" {
   tag_specifications {
     resource_type = "instance"
     tags = {
-      Installable       = var.installable
+      # Installable       = var.installable
       TrustedPublicKeys = var.trusted_public_keys
       Substituters      = var.substituters
     }
