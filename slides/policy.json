@@ -1,0 +1,66 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ResourcedToBeCreated",
+            "Effect": "Allow",
+            "Action": "ec2:RunInstances",
+            "Resource": [
+                "arn:aws:ec2:*:*:instance/*",
+                "arn:aws:ec2:*:*:network-interface/*",
+                "arn:aws:ec2:*:*:volume/*"
+            ],
+            "Condition": {
+                "StringEquals": {
+                    "aws:RequestTag/Environment": "${aws:PrincipalTag/Environment}"
+                },
+                "Bool": {
+                    "ec2:IsLaunchTemplateResource": "true"
+                }
+            }
+        },
+        {
+            "Sid": "ResourcedToBeUsed",
+            "Effect": "Allow",
+            "Action": "ec2:RunInstances",
+            "Resource": [
+                "arn:aws:ec2:*:*:image/*",
+                "arn:aws:ec2:*:*:subnet/*",
+                "arn:aws:ec2:*:*:security-group/*"
+            ],
+            "Condition": {
+                "StringEquals": {
+                    "ec2:ResourceTag/Environment": "${aws:PrincipalTag/Environment}"
+                },
+                "Bool": {
+                    "ec2:IsLaunchTemplateResource": "true"
+                }
+            }
+        },
+        {
+            "Effect": "Allow",
+            "Action": "ec2:CreateTags",
+            "Resource": [
+                "arn:aws:ec2:*:*:instance/*",
+                "arn:aws:ec2:*:*:network-interface/*",
+                "arn:aws:ec2:*:*:volume/*"
+            ],
+            "Condition": {
+                "StringEquals": {
+                    "ec2:CreateAction": ["RunInstances"],
+                    "aws:RequestTag/Environment": "${aws:PrincipalTag/Environment}"
+                }
+            }
+        },
+        {
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::*:role/${aws:PrincipalTag/Environment}",
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "ec2.amazonaws.com"
+                }
+            }
+        }
+    ]
+}
