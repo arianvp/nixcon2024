@@ -240,8 +240,8 @@ resource "aws_launch_template" "webserver" {
   name          = "webserver"
   image_id      = var.image_id
   instance_type = "t4g.small"
-  iam_instance_profile = "Read from S3, Access Database"
   user_data     = base64(file("${path.module}/provision.sh"))
+  iam_instance_profile = "Read from S3, Access Database"
 }
 ```
 
@@ -309,7 +309,7 @@ SPEAKER:
 resource "aws_auto_scaling_group" "webserver" {
   launch_template {
     id = "lt-23238283"
-    ~ version = 4 -> 5
+    version = 4 -> 5
   }
   instance_refresh {
     strategy               = "Rolling"
@@ -404,9 +404,11 @@ SPEAKER:
 
 SPEAKER:
 
+* Use same image in each version
+* Specify in launch template what closure to deploy
 * Launch Template has permissions to access S3 bucket
 * Fetch closure from S3 bucket
-* Switch to new configuration
+* Switch to new configuration on startup
 
 ---
 
@@ -431,7 +433,7 @@ resource "aws_launch_template" "webserver" {
 
 SPEAKER:
 
-* We attach a user_data script to the launch template
+* We attach a `provision.sh` script to the launch template
 * This script runs at startup and provisions the instance
 * We attach what nix store path to deploy and where to fetch it from as tags to the instance
 
@@ -902,7 +904,8 @@ SPEAKER:
 ---
 
 ## Define role
-```
+
+<pre><code data-trim data-line-numbers="3,8">
 resource "aws_iam_role" "nix_build" {
   name = "nix-build"
   assume_role_policy = file("trust-policy.json")
@@ -912,12 +915,14 @@ resource "aws_iam_role_policy_attachment" "write" {
   role       = aws_iam_role.nix_build.name
   policy_arn = module.nix_cache_bucket.write_policy_arn
 }
-```
+</code></pre>
+
+
 ---
 
 ## Use role in Github Actions
 
-```yaml
+<pre class="yaml"><code data-trim data-line-numbers="7,9">
 build:
   permissions:
     id-token: write 
@@ -927,7 +932,7 @@ build:
       role-to-assume: arn:aws:iam:xxx:role/nix-build
     - run: nix build
     - run: nix copy --to s3://nix-cache-bucket
-```
+</code></pre>
 
 ---
 
@@ -942,7 +947,7 @@ build:
 
 ## Deploy Policy
 
-```nix
+<pre class="json"><code data-trim data-line-numbers="5,9">
 resource "iam_policy" "deploy_production" {
   policy = jsonencode({
     Statement = [{
@@ -957,7 +962,7 @@ resource "iam_policy" "deploy_production" {
     }]
   })
 }
-```
+</code></pre>
 
 SPEAKER:
 
