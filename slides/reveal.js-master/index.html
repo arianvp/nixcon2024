@@ -16,7 +16,7 @@
 	<body>
 		<div class="reveal">
 			<div class="slides">
-				<section data-markdown="slides.md">
+				<section data-markdown="slides.md" data-separator-notes="^SPEAKER:">
 				</section>
 				<section>
 				</section>
@@ -33,6 +33,8 @@
 			// - https://revealjs.com/config/
 			Reveal.initialize({
 				hash: true,
+				width: 970,
+				height: 700,
 
 				// Learn about plugins: https://revealjs.com/plugins/
 				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]

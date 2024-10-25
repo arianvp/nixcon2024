@@ -2,57 +2,132 @@
 
 ---
 
-## NixOS at Mercury
+## Me
 
-* Hundreds of engineers deploying changes to production multiple times per day.
-* Stateless application servers running behind load-balancer
-* Stateful supporting infrastructure (Grafana, Prometheus, Vault, etc)
-* Fleet of Github Actions runners
+* Arian van Putten (`@arianvp`)
+* NixOS maintainer (ACME, systemd, cloud)
+* Infra @ Mercury.com
 
 ---
 
-## Status Quo a year ago
+## Nix and NixOS at Mercury
+
+* Hundreds of engineers deploying changes to production multiple times per day.
+
+![infra](infra.drawio.svg)
+
+SPEAKER:
+
+* Nix shell for development
+* Haskell app
+* Stateless application servers NixOS
+* Database
+* Stateful supporting services NixOS
+
+---
+
+## Deploys a year ago
+
+![deploy](deploy.drawio.svg)
+
+* `nix-copy-closure --to ssh://$host`
+
+SPEAKER:
 
 * Engineers using Github Actions for CI
 * Infra team using Hydra for CD
-* Hydra continously builds NixOS configurations and pushes them out with `nix-copy-closure`
+* Long lived EC2 instances
+* Manually added to inventory to deploy to
+* Hydra continously builds NixOS configurations and pushes them out with `nix-copy-closure` over ssh
 * Similar to NixOps, Colemna, deploy-rs etc
 * Some hooks to drain from load-balancer before nixos-rebuild switch
+
 
 ---
 
 ## Issues
 
+![deploy](deploy.drawio.svg)
+
+SPEAKER: 
+
 * Artifacts built twice in GHA and Hydra
-* Hard to track deploy status
-* Kernel updates and NixOS upgrades 
-* Bastion host and key distribution for ssh access 
-* No recent NixOS AMIs available on AWS
+* Separate repos for app and infra
+* Infra tracks different nixpkgs than backend
+* Hard to track deploy status for engineers
+* New instances manually added to inventory
+* Bastion host and key management for ssh access 
+* Kernel updates and NixOS upgrades  coordination
+* Setting up new instances tedious due to old AMI. Requires reboot
+
 
 ---
 
 ## Goals
 
-* Unify CI and CD to give developers insight in the deploy process
-* No long-lived credentials. Rely on zero-trust principles and native AWS auth mechanisms
-* Automated roll-out of new machine images for kernel upgrades without manual steps
-* More flexible deploy model to allow for more advanced deploy strategies
+### Empower engineers
+
+* Visibility into deploy status
+* Faster deploys
+* Richer deploy strategies
+
+---
+
+## Goals
+
+### Reduce toil for infra team
+
+* Adding new instances to inventory automatic
+* Up to date base images
+* Automate rollout of changes requiring reboot
+
+SPEAKER:
+
+* There was quite a bit of manual work for infrastructure engineers
+* Shouldn't require to reboot new instances due to old AMI when creating new instances
+
+
+---
+
+## Goals
+
+### Improve security
+
+* No need for bastion host
+* Up to date base images
+* Easy to roll out updates quickly
+
 
 ---
 
 ## Proposed solution - pipeline
 
-* Github actions for both CI and CD
-* Regular and automated updates to NixOS AMIs
-* Use Github Actions ID Tokens and AWS IAM roles for strong cryptographic authentication
-* Tightly restrict access to AWS resources using Github Environments and AWS IAM Policies
+![new-deploy](new-deploy.drawio.svg)
+
+
+SPEAKER:
+
+### Solution
+
+* Github Actions for CI/CD
+* Single repository
+* Restrict deploy to environments / branches
   * Developers can stage pull requests to staging environments
   * Only main branch can access production environments
+* AWS APIs instead of SSH to manage deploys
+* AWS IAM for scoped authentication
 
 ---
 
 ## Proposed solution - deploy primitives
 
+* Stateless: Auto scaling groups
+* Stateful: AWS Systems Manager
+
+![newinfra](newinfra.drawio.svg)
+
+
+SPEAKER:
 * Auto Scaling Groups using instance refresh, for stateless services
   * Allow for rolling releases, blue-green, canary, rollbacks etc.
 * AWS Systems Manager State Manager for stateful services
@@ -68,7 +143,7 @@
 * Image Build and Upload Automation pipeline
 * Auto scaling group support for NixOS
 * AWS Systems Manager State Manager support for NixOS
-* Github actions workflow for nix builds with S3 binary cache
+* Authentication between Github Actions and AWS
 
 ---
 
@@ -80,21 +155,47 @@
 
 ---
 
-## Image build and Upload Automation
+## Image Build and Upload automation
+
+* Since 24.05 AMIs are now maintained again!
+* Automated weekly upload using Github Actions
+
+SPEAKER:
 
 * Took over maintance of AWS support in NixOS
 * Built a github actions pipeline to build and upload NixOS AMIs regularly
-* Uses IAM roles for authentication (Will talk more about this later)
 * AMIs now uploaded for every channel bump since 24.05
-* Open sourced at https://github.com/nixos/amis
-* Can use tooling to build your own custom AMIs
 
 ---
 
+## Image build and Upload Automation
 
-## Autoscaling groups
 
-* Define fleet of instances using a common configuration called a **Launch Template**
+* https://github.com/nixos/amis
+* https://nixos.org/download/#nixos-amazon
+* `nix run github:NixOS/amis#upload-ami `
+
+![amis](amis.png)
+
+SPEAKER:
+
+* AMIs now uploaded for every channel bump since 24.05
+* You can use the tooling to upload your own AMIs too!
+
+---
+
+## How to use Autoscaling groups with NixOS
+
+---
+
+## What is Autoscaling groups
+
+![asg](asg.drawio.svg)
+
+SPEAKER:
+
+* Fleet of instances using a common configuration called a **Launch Template**
+  * Define the image, instance type, and user data
 * instances scaled up and down on demand, created according to launch template
 * Balanced across availability zones for high availability
 * Associated with a load balancer to distribute traffic
@@ -102,15 +203,14 @@
 
 ---
 
-## Autoscaling groups
-
+## Creating an Autoscaling groups
 
 ```terraform
 resource "aws_auto_scaling_group" "webserver" {
   name     = "webserver"
   min_size = 1
   max_size = 10
-  vpc_zone_identifier = var.private_subnet_ids
+  vpc_zone_identifier = [ eu-central-1a, eu-central-1b ]
   launch_template {
     id      = aws_launch_template.webserver.id
   }
@@ -121,42 +221,120 @@ resource "aws_auto_scaling_group" "webserver" {
   }
 }
 ```
+
+SPEAKER: 
+
+* Define availability zones (Subnets)
+* Attach to load balancer
+* Scaling parameters
+* Launch template
+
 ---
 
 ## Launch Template
+
+![launchtemplate](launchtemplate.drawio.svg)
 
 ```
 resource "aws_launch_template" "webserver" {
   name          = "webserver"
   image_id      = var.image_id
   instance_type = "t4g.small"
+  iam_instance_profile = "Read from S3, Access Database"
   user_data     = base64(file("${path.module}/provision.sh"))
 }
 ```
+
+SPEAKER:
+
+* Define all properties of instances
+* What permissions does the instance have
+  * Machines can access our app database
+  * Machines can access our binary cache
+* What instance type
+* What base image
+* Startup script
+
+---
+
+## Launch Template Versions
+
+<pre><code data-trim data-line-numbers="6">
+resource "aws_auto_scaling_group" "webserver" {
+  name     = "webserver"
+  ...
+  launch_template {
+    id      = aws_launch_template.webserver.id
+    version = aws_launch_template.webserver.latest_version
+  }
+</code></pre>
+
+SPEAKER:
+
+* Updating a launch template creates immutable version
+* Auto scaling group points to a specific version
+
+---
+
+## Launch Template Versions
+
+* Like nix profiles, but for instances
+
+![1](lt-version-1.drawio.svg)
+
+SPEAKER:
+
+* Say we have deployed `image-1`
+* But we want to deploy `image-2`
+
+---
+
+## Launch Template Versions
+
+* Like nix profiles, but for instances
+
+![2](lt-version-2.drawio.svg)
+
+SPEAKER:
+
+* Point to a new launch template, and new instances use the new image
 
 ---
 
 ## Instance refresh
 
-* Updating a launch template creates an immutable **Launch Template Version**
-  * Think nix profiles but for EC2 instances
-* Instance Refresh rolls out new instances according to the new launch template version
-  * Think `nixos-rebuild switch` but for EC2 instances
+* Think "nixos-rebuild switch to new generation"
+
+```
+resource "aws_auto_scaling_group" "webserver" {
+  launch_template {
+    id = "lt-23238283"
+    ~ version = 4 -> 5
+  }
+  instance_refresh {
+    strategy               = "Rolling"
+    checkpoint_percentages = [ 50, 100 ]
+    min_healthy_percentage = 50
+    max_healthy_percentage = 150
+    auto_rollback          = true
+  }
+}
+```
+
+SPEAKER:
+
+* Roll out new instances according to new launch template version
+* Manage load balancer registration and deregistration
+* Rollback to previous version if new version fails health checks
+
+---
+
+# Iteration 1: Build AMI per release
 
 
 ---
 
-## Instance Refresh
-
-1. Create new instances according to new launch template version
-1. Drain old instances from load balancer
-1. Terminate instances
-1. Rollback to old version if new version fails health checks
-
-
----
-
-## Iteration 1: Build AMI per release
+## Build AMI with NixOS
 
 ```nix
 # ./nix/hosts/webserver.nix
@@ -175,23 +353,26 @@ resource "aws_launch_template" "webserver" {
 
 ```bash
 $ nix build '.#hydraJobs.webserver.amazonImage'
-$ image_id=$(nix run 'github:NixOS/amis#upload-ami' -- \
-    --image-info ./result/nix-support/image-info.json)
-$ TF_VAR_image_id=$image_id terraform apply
+$ nix run 'github:NixOS/amis#upload-ami' -- ./result
+
+ami-7654321098abcdef0
 ```
+
+SPEAKER:
+
+* Can easily build AMIs from NixOS configs
+* Upload them with `upload-ami`
+
 
 ---
 
-## Iteration 1: Build AMI per release
+## Deploy with Terraform
+
+```
+TF_VAR_image_id=ami-7654321098abcdef0 terraform apply
+```
 
 ```text
-# aws_autoscaling_group.webserver will be updated in-place
-~ resource "aws_autoscaling_group" "webserver" {
-    ~ launch_template {
-          id      = "lt-0945d5011bf2bb1d7"
-        ~ version = "4" -> (known after apply)
-      }
-  }
 # aws_launch_template.webserver will be updated in-place
 ~ resource "aws_launch_template" "webserver" {
       id                      = "lt-0945d5011bf2bb1d7"
@@ -200,44 +381,45 @@ $ TF_VAR_image_id=$image_id terraform apply
         "ami-7654321098abcdef0"
   }
 ```
+
+SPEAKER:
+
+* Update the launch template With the new AMI
+* Roll out release with instance refresh
+
 ---
 
 ## Problems
 
-* Uploading AMIs is quite slow (5-10 minutes)
-  * Could be improved with e.g. https://github.com/awslabs/coldsnap
+* Uploading is slow (5-10 minutes)
 * Uses a lot of storage space. No deduplication of common dependencies between AMIs
 
 ---
 
-## Iteration 2: Use user-data to provision instances
-
-* Use the official NixOS AMI
-* Pass `user_data` to Launch Template. Bash script that instance runs on first boot
-* Fetch NixOS closure from binary cache
-* Run `switch-to-configuration boot && kexec` to boot into new configuration
+# Iteration 2: Use user-data to provision instances
 
 ---
 
-## Iteration 2: Use user-data to provision instances
+![lt-bucket](lt-bucket.drawio.svg)
 
-* Upside: Deduplication of common dependencies in binary cache
-* Downside: Boot times slower as instance needs to fetch closure from binary cache on startup
+SPEAKER:
+
+* Launch Template has permissions to access S3 bucket
+* Fetch closure from S3 bucket
+* Switch to new configuration
 
 ---
 
-## Iteration 2: Use user-data to provision instances
+## Specify nix store path in launch tempalte
 
-* Attach nix store path to deploy as tag on instance
-
-<pre><code data-trim data-line-numbers="5,11">
+<pre><code data-trim data-line-numbers="5,7,11">
 resource "aws_launch_template" "webserver" {
   name     = "webserver"
   image_id = data.aws_ami.nixos.id
   metadata_options {
     instance_metadata_tags = "enabled"
   }
-  user_data = base64encode(file("${path.module}/provision.sh"))
+  user_data = file("./provision.sh")
   tag_specifications {
     resource_type = "instance"
     tags = {
@@ -245,14 +427,21 @@ resource "aws_launch_template" "webserver" {
       Substituters      = "s3://nixcon2024-cache"
     }
   }
-}
 </code></pre>
+
+SPEAKER:
+
+* We attach a user_data script to the launch template
+* This script runs at startup and provisions the instance
+* We attach what nix store path to deploy and where to fetch it from as tags to the instance
 
 ---
 
-## Iteration 2: Use user-data to provision instances
+## `provision.sh`
 
-<pre><code data-trim data-line-numbers="">
+* Fetchs tags from instance metadata service
+
+<pre><code data-trim data-line-numbers="3-5,10">
 #!/bin/sh
 meta=169.254.169.254
 get_tag() {
@@ -260,7 +449,6 @@ get_tag() {
 }
 profile=/nix/var/nix/profiles/system
 nix build \
-  --trusted-public-keys "$(get_tag TrustedPublicKeys)" \
   --substituters "$(get_tag Substituters)" \
   --profile "$profile" \
   "$(get_tag NixStorePath)"
@@ -271,15 +459,60 @@ systemctl start kexec.target
 
 ---
 
-## Iteration 2: Use user-data to provision instances
+## `provision.sh`
 
-* Pattern abstracted into a Terraform module
+* Substitute store path
 
+<pre><code data-trim data-line-numbers="7-10">
+#!/bin/sh
+meta=169.254.169.254
+get_tag() {
+  curl "http://$meta/latest/meta-data/tags/instance/$1"
+}
+profile=/nix/var/nix/profiles/system
+nix build \
+  --substituters "$(get_tag Substituters)" \
+  --profile "$profile" \
+  "$(get_tag NixStorePath)"
+
+"$profile/bin/switch-to-configuration" boot
+systemctl start kexec.target
+</code></pre>
+
+---
+
+
+## `provision.sh`
+
+* Reboot into new configuration
+
+<pre><code data-trim data-line-numbers="12-13">
+#!/bin/sh
+meta=169.254.169.254
+get_tag() {
+  curl "http://$meta/latest/meta-data/tags/instance/$1"
+}
+profile=/nix/var/nix/profiles/system
+nix build \
+  --substituters "$(get_tag Substituters)" \
+  --profile "$profile" \
+  "$(get_tag NixStorePath)"
+
+"$profile/bin/switch-to-configuration" boot
+systemctl start kexec.target
+</code></pre>
+
+SPEAKER:
+
+* Why reboot? switch-to-configuration is not perfect. This is more reliable
+* e.g. switch-to-configuration doesn't restart dbus, udev
+
+---
+
+## Terraform module 
 
 <pre><code data-trim data-line-numbers="8">
-module "nix_cache_bucket" {
-  source = "./modules/nix_cache_bucket"
-}
+module "nix_cache_bucket" { source = "./modules/nix_cache_bucket" }
 module "webserver_launch_template" {
   source         = "./modules/nixos_launch_template"
   name           = "webserver"
@@ -299,18 +532,32 @@ resource "aws_auto_scaling_group" "webserver" {
   }
 }
 </code></pre>
+
+SPEAKER:
+
+* abstracted this in a terraform module
+* Published on github
+
 ---
 
-## Iteration 2: Deploy using terraform
-
+## Deploy using terraform
 
 ```bash
-$ store_path=$(nix build '.#hydraJobs.webserver')
-$ nix copy --to s3://nixcon2024-cache-bucket
-$ TF_VAR_nix_store_path=$store_path terraform apply
+store_path=$(nix build '.#hydraJobs.webserver')
 ```
+
+```bash
+nix copy --to s3://nixcon2024-cache-bucket $store_path
 ```
-# module.launch_template.aws_launch_template.this will be updated in-place
+
+```bash
+TF_VAR_nix_store_path=$store_path terraform apply
+```
+
+---
+
+## Deploy using terraform
+```
 ~ resource "aws_launch_template" "this" {
       id                      = "lt-0945d5011bf2bb1d7"
     ~ latest_version          = 4 -> (known after apply)
@@ -324,7 +571,6 @@ $ TF_VAR_nix_store_path=$store_path terraform apply
 ```
 
 ```
-# aws_autoscaling_group.webserver will be updated in-place
 ~ resource "aws_autoscaling_group" "webserver" {
     ~ launch_template {
           id      = "lt-0945d5011bf2bb1d7"
@@ -332,6 +578,13 @@ $ TF_VAR_nix_store_path=$store_path terraform apply
       }
   }
 ```
+
+SPEAKER:
+
+* Updating nix store path tag
+* Changing launch template creates new version
+* New version changes auto scaling group
+* Triggers instance refresh
 
 ---
 
@@ -343,7 +596,7 @@ $ TF_VAR_nix_store_path=$store_path terraform apply
 
 ---
 
-## Iteration 3: Deploy using AWS CLI directly
+## AWS CLI
 
 ```bash
 version=$(aws ec2 create-launch-template-version \
@@ -360,7 +613,7 @@ aws autoscaling start-instance-refresh \
 
 ---
 
-## Iteration 3: Wrapped in Github Workflow
+## Wrapped in Github Workflow
 ```yaml
 build:
   uses: ./.github/workflows/build-and-push.yml
@@ -383,52 +636,55 @@ deploy:
 ---
 
 ## Auto Scaling Groups:  conclusion
-* Zero-downtime roll-out of new NixOS Config
-* Instance refresh allows for rolling releases, canary, automatic rollbacks
+
+
+![asg-summar](asg-summary.drawio.svg)
+
+SPEAKER:
+
+* Instance Refresh through API instead of ssh access
+* Reboot to upgrade solved. Always create new instances!
+* Rollbacks, Canary deploys possible
 * Triggered from Github Actions pipeline
 
 ---
 
+# Stateful services
 
-## Stateful services
+![ssm.drawio.svg](stateful.drawio.svg)
 
-* Stateful services like Prometheus, Grafana, Vault etc.
 * Upgrade in place instead of destroying and recreating instances
-* Use AWS Systems Manager State Manager to reconcile stateful services
+
+SPEAKER:
+
+* Some things not a good fit for ASGs
+* e.g. don't want to throw away prometheus metrics on upgrade
+* Need mechanism to upgrade in place (nixos-rebuild switch/boot)
 
 ---
 
 ## AWS Systems Manager 
-* Agent shipped with NixOS since 24.05
-* Authenticates securely to central server using instance's cryptographic identity (IAM Role)
-* no ssh keys to manage
-* no bastion host. No need to expose instances to the internet
-* Can send "documents" to instances. Idempotent playbooks a la ansible.
-* Associate document with group of instances using tags
+
+* agent shipped with NixOS since 24.05
+* Remote access for admins
+* AWS can send "documents" to instances. Idempotent playbooks
 
 ---
 
-## AWS Systems Manager
+## Security vs SSH
 
-* Can also be used to get a shell into instances
-* Even if they are not reachable from the internet
-* Access restricted with IAM policies
+![ssm](ssm.drawio.svg)
+
+SPEAKER: 
+
+* Instances can be in private subnet
+* No need for bastion host
+* Identity-based authentication, auto-key rotation
+* Audit logging
 
 ---
 
-## NixOS-Deploy document
-* Basically the same as launch-template user-data script.
-* Does `nixos-rebuild switch` instead.  Or optionally reboot.
-* nixos-rebuild switch/boot is idempotent. So perfect fit.
-* Reusable module available in our repo
-```
-module "nixos_deploy_ssm_document" {
-  source = "modules/nixos_deploy_ssm_document"
-}
-```
----
-
-## State Manager association
+## Define an instance
 
 ```terraform
 resoure "aws_instance" "prometheus" {
@@ -447,28 +703,57 @@ resoure "aws_instance" "prometheus" {
 }
 ```
 
+SPEAKER:
+
+* Note the role tag!
+
+
 ---
 
-## State Manager association
+## Create NixOS-Deploy document
+* Basically the same as launch-template user-data script.
+* `nixos-rebuild switch` is idemptotent
+* Published as terraform module
+```
+module "nixos_deploy_ssm_document" {
+  source = "modules/nixos_deploy_ssm_document"
+}
+```
 
-<pre><code data-line-numbers="5,8-11" data-trim>
+SPEAKER:
+
+* We created an SSM Document that can do switch-to-configuration
+
+---
+
+## Associate instances with SSM document
+
+
+<pre><code data-line-numbers="2,5,8" data-trim>
 resource "aws_ssm_association" {
   name = module.nixos_deploy_ssm_document.name
-  parameters = {
+  paramters = {
     substituters = module.nix_cache_bucket.store_uri
     installable  = var.nix_store_path
     action       = "switch" # or "reboot"
   }
-  targets {
-    key    = "tag:Role"
-    values = ["prometheus"]
-  }
+  targets { key = "tag:Role", values = ["prometheus"] }
   max_concurrency = "50%"
   max_errors      = "50%"
 }
 </code></pre>
 
+SPEAKER:
 
+* What store path to deploy
+* From what cache to fetch
+* Which instances to target
+* Whether to reboot or switch in place
+* Rollout strategy
+
+---
+
+## Deploy
 ```bash
 #!/bin/sh
 
@@ -476,6 +761,26 @@ store_path=$(nix build '.#hydraJobs.prometheus')
 nix copy --to s3://nix-cache-bucket
 TF_VAR_nix_store_path=$store_path terraform apply
 ```
+
+SPEAKER:
+
+* Will start applying the config in-place
+* targets all instances that have the tag
+* New instances automatically applied to
+* Can stop rollout if too many errors
+
+---
+
+## Stateful services: Summary
+
+
+![ssm](ssm.drawio.svg)
+
+
+SPEAKER:
+
+* In-place upgrades. State preserved
+* No more need for SSH bastion host
 
 ---
 
@@ -487,7 +792,7 @@ TF_VAR_nix_store_path=$store_path terraform apply
 
 ## How to authenticate our instances to AWS?
 
-* Fetch from cache
+* Fetch nix closure from cache
 * Connect to AWS Systems Manager
 * Application itself needs to authenticate to other AWS services
   * S3 buckets
@@ -499,6 +804,10 @@ TF_VAR_nix_store_path=$store_path terraform apply
 
 ## AWS IAM Roles and Policies
 
+![roles](roles.drawio.svg)
+
+SPEAKER:
+
 * Role is an identity that can be assumed by another entity
 * Can by assumed by:
   * AWS Services (your EC2 instance, Lambda Functions)
@@ -506,17 +815,19 @@ TF_VAR_nix_store_path=$store_path terraform apply
   * **Other federated identities (e.g. Github Actions)**
 * Role has attached policies that define permisisons
 * Role credentials are temporary and rotated automatically
+* Credentials sign requests. No bearer tokens that can leak in request logs
 
 ---
 
 ## ID Tokens in Github Actions
 * Github actions exposes ID token JWT signed by Github
-* Scoped to specific repository, branch, or Github Environent
+* Scoped to specific repository, branch, or Github Environment
+* Unique per workflow run
 * Signed with well-known key
 
 ---
 
-## ID Tokens in Github Actions
+## ID Tokens for push to production
 
 ```yaml
 on:
@@ -535,6 +846,14 @@ job:
 }
 ```
 
+SPEAKER:
+
+* Point out subject claim
+
+---
+
+## ID Token for pull request
+
 ```yaml
 on:
   pull_request:
@@ -550,11 +869,15 @@ job:
 }
 ```
 
+SPEAKER:
+
+* Point out subject claim
+
 ---
 
 ## Trust policy for IAM Role
 
-<pre><code data-trim data-line-numbers="2,4,11">
+<pre><code data-trim data-line-numbers="2,4,9,11">
 "Effect": "Allow",
 "Action": "sts:AssumeRoleWithWebIdentity",
 "Principal": {
@@ -570,12 +893,15 @@ job:
 }
 </code></pre>
 
-* Allow assuming the role with an ID token
+SPEAKER:
+
+* Trust policy defines who can assume the role under what conditions
 * If Signed by Github
+* If target audience is AWS 
 * If request came from a pull request
 ---
 
-## Define role, and use in Github Actions
+## Define role
 ```
 resource "aws_iam_role" "nix_build" {
   name = "nix-build"
@@ -587,6 +913,9 @@ resource "aws_iam_role_policy_attachment" "write" {
   policy_arn = module.nix_cache_bucket.write_policy_arn
 }
 ```
+---
+
+## Use role in Github Actions
 
 ```yaml
 build:
@@ -602,7 +931,16 @@ build:
 
 ---
 
-## ABAC
+## Deploys
+
+* Scoped to Github environments (production, staging)
+* Branch protection rules
+  * `prod` <-> `main` branch
+  * `staging` <-> pull request branches
+
+---
+
+## Deploy Policy
 
 ```nix
 resource "iam_policy" "deploy_production" {
@@ -621,44 +959,88 @@ resource "iam_policy" "deploy_production" {
 }
 ```
 
+SPEAKER:
+
+* A policy that allows deploys to ASGs with production tag
+
 ---
 
-## AWS IAM Roles and Policies
+## Production role trust policy
+
+<pre><code data-trim data-line-numbers="6">
+resource "aws_iam_role" "deploy_production" {
+  name = "deploy-production"
+  assume_role_policy = jsonencode({
+    ...
+    "token.actions.githubusercontent.com:sub":
+      "repo:arianvp/nixcon2024:environment:production"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "deploy" {
+  role       = aws_iam_role.deploy_production.name
+  policy_arn = aws_iam_policy.deploy_production.arn
+}
+</code></pre>
+
+---
+
+## Use role in Github Actions
+
+<pre><code data-trim data-line-numbers="3,7,9">
+deploy:
+  permissions:
+    id-token: write
+  steps:
+    uses: ./.github/workflows/instance-refresh.yml
+    with:
+      environment: production
+      aws-region: eu-central-1
+      role-to-assume: arn:aws:iam:xxx:role/deploy-production
+</code></pre>
+
+---
 
 ![diagram](diagram.svg)
 
+SPEAKER:
+
+1. Github Actions exchanges id token for role credential
+2.  Role gives access to certain permissions
+3. Can use credential to upload to S3
+4. Can't use credential to do deploy
+5. Server can use its credential to download from S3
 
 ---
 
 ## Conclusion
 
 * Unified CI and CD pipeline, visibility for developers
-* rollout at scale using auto scaling groups and AWS SSM
-* Strong cryptographic authentication using Github Actions ID tokens
-
-----
-
-## Show me the code
-
-* https://github.com/arianvp/nixcon2024 contains WIP code
-* https://github.com/nixos/amis
-* Planning to open source the terraform modules:
-  * NixOS Launch Template
-  * NixOS SSM Document
-  * S3 Binary cache + IAM policies
-  * IAM roles for Github Actions
+* Secure rollout at scale using auto scaling groups and AWS SSM
+* Strong cryptographic identity using Github Actions ID tokens and IAM Roles
+* **No credentials or secrets to manage at all**
 
 ---
 
-## Roadmap
+## Use AWS and NixOS? Talk to me!
+
+<img src="matrix.png" width="200">
+
+* Join our matrix [`#aws:nixos.org`](https://matrix.to/#/#aws:nixos.org)
+* https://github.com/nixos/amis
+
+* https://github.com/arianvp/nixcon2024 
+
+
+---
+
+## Future work
 * Want to bring more AWS improvements to NixOS
 * Better image builder tooling using systemd-repart
-* SecureBoot
 * Repartitioning root volume
 * Lifecycle hooks for autoscaling groups
+* SecureBoot?
 * CloudWatch logging
-
-
 
 ---
 
