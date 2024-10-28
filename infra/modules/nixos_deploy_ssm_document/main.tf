@@ -9,15 +9,15 @@ resource "aws_ssm_document" "nixos_deploy" {
         type          = "String"
         description   = "Whether to switch or reboot to deploy."
         allowedValues = ["switch", "test", "boot", "reboot", "dry-activate"]
-        default       = "switch"
+        default       = var.action
       }
       profile = {
         type    = "String"
-        default = "/nix/var/nix/profiles/system"
+        default = var.profile
       }
       installable = {
         type        = "String"
-        default     = ""
+        default     = var.installable
         description = <<-EOF
         The configuration to deploy.
         Either a nix flake attribute or a nix store path.
@@ -31,12 +31,12 @@ resource "aws_ssm_document" "nixos_deploy" {
       substituters = {
         type        = "String"
         description = "The substituters to use."
-        default     = ""
+        default     = var.substituters
       }
       trustedPublicKeys = {
         type        = "String"
         description = "The key with which to verify the substituters."
-        default     = ""
+        default     = var.trusted_public_keys
       }
     }
     mainSteps = [

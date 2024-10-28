@@ -1,10 +1,16 @@
-module "nixos_deploy_ssm_document" {
-  source = "../../modules/nixos_deploy_ssm_document"
+locals {
+  trusted_public_key = file("${path.module}/key.pub")
 }
-
 module "nix_cache" {
   source = "../../modules/nix_cache_bucket"
 }
+
+module "nixos_deploy_ssm_document" {
+  source              = "../../modules/nixos_deploy_ssm_document"
+  substituters        = module.nix_cache.store_uri
+  trusted_public_keys = local.trusted_public_key
+}
+
 
 module "vmimport" {
   source = "../../modules/vmimport"
@@ -45,13 +51,13 @@ resource "aws_iam_role_policy_attachment" "build_write_cache" {
 # Allow Github Actions to upload images
 resource "aws_iam_role_policy_attachment" "build_write_vmimport" {
   role       = aws_iam_role.build.id
-  policy_arn = module.vmimport.write_policy_arn 
+  policy_arn = module.vmimport.write_policy_arn
 }
 
 resource "github_actions_variable" "VMIMPORT_BUCKET" {
   repository    = var.github_repository
   variable_name = "VMIMPORT_BUCKET"
-  value         = module.vmimport.bucket 
+  value         = module.vmimport.bucket
 }
 
 resource "github_actions_variable" "BUILD_ROLE_ARN" {
@@ -68,7 +74,7 @@ resource "github_actions_variable" "NIX_STORE_URI" {
 
 output "nix_cache" {
   value = merge(module.nix_cache, {
-    trusted_public_key = file("${path.module}/key.pub")
+    trusted_public_key = local.trusted_public_key
   })
 }
 

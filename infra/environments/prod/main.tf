@@ -47,7 +47,7 @@ resource "aws_vpc_security_group_ingress_rule" "ingress_prometheus_node_exporter
   referenced_security_group_id = aws_security_group.prometheus.id
   from_port                    = 9100
   to_port                      = 9100
-  ip_protocol                  = "tcp" 
+  ip_protocol                  = "tcp"
 }
 
 resource "aws_vpc_security_group_egress_rule" "egress_ipv4" {
@@ -64,7 +64,7 @@ resource "aws_vpc_security_group_egress_rule" "egress_ipv6" {
 
 
 module "website" {
-  source = "../../modules/website"
+  source             = "../../modules/website"
   name               = "website-prod"
   nix_cache          = data.terraform_remote_state.global.outputs.nix_cache
   instance_type      = "t3a.small"
@@ -78,11 +78,10 @@ module "website" {
 
 resource "aws_security_group" "prometheus" {
   name   = "prometheus"
-  vpc_id = module.vpc.id 
+  vpc_id = module.vpc.id
 }
 
 resource "aws_instance" "prometheus" {
-  count         = 0
   ami           = data.aws_ami.nixos.id
   instance_type = "t4g.small"
   key_name      = "framework"
@@ -90,5 +89,16 @@ resource "aws_instance" "prometheus" {
   security_groups = [
     aws_security_group.prometheus.id,
     aws_security_group.instance.id
-  ] 
+  ]
+  tags = {
+    Role = "prometheus"
+  }
+}
+
+resource "aws_ssm_association" "deploy_prometheus" {
+  name = "NixOS-Deploy"
+  targets {
+    key    = "tag:Role"
+    values = ["prometheus"]
+  }
 }
