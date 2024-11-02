@@ -8,8 +8,6 @@ profile='{{ profile }}'
 substituters='{{ substituters }}'
 trustedPublicKeys='{{ trustedPublicKeys }}'
 
-[ -e "$installable" ] || exit 0
-
 nix build \
   --extra-experimental-features 'nix-command flakes' \
   --extra-trusted-public-keys "$trustedPublicKeys" \
