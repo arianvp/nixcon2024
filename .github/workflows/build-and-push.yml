@@ -42,6 +42,7 @@ jobs:
         with:
           extra-conf: |
             extra-substituters = ${{ inputs.store-uri }}
+            extra-trusted-public-keys = ${{ inputs.public-key }}
 
       - uses: aws-actions/configure-aws-credentials@v4
         id: aws
@@ -76,7 +77,7 @@ jobs:
         name: upload snapshot
         run: |
           file=$(jq -r '.file' ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json)
-          snapshot_id=$(nix run nixpkgs#coldsnap upload --wait "$file")
+          snapshot_id=$(nix run nixpkgs#coldsnap upload -- --wait "$file")
           echo "snapshot-id=$snapshot_id" >> "$GITHUB_OUTPUT"
       - id: register-image
         if: ${{ inputs.upload-image }}
