@@ -33,8 +33,10 @@ resource "aws_iam_role" "build" {
         Action = "sts:AssumeRoleWithWebIdentity",
         Condition = {
           StringEquals = {
-            "${data.aws_iam_openid_connect_provider.github_actions.url}:sub" = "repo:${var.github_owner}/${var.github_repository}:pull_request"
-            "${data.aws_iam_openid_connect_provider.github_actions.url}:sub" = "repo:${var.github_owner}/${var.github_repository}:ref:refs/heads/main"
+            "${data.aws_iam_openid_connect_provider.github_actions.url}:sub" = [
+              "repo:${var.github_owner}/${var.github_repository}:pull_request",
+              "repo:${var.github_owner}/${var.github_repository}:ref:refs/heads/main"
+            ]
           }
         }
       },
