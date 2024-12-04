@@ -72,11 +72,21 @@ jobs:
           # fi
           store_path=$(nix path-info --eval-store auto --store "${{ inputs.store-uri }}" ${{ inputs.installable }})
           echo "store-path=$store_path" >> "$GITHUB_OUTPUT"
-      - if: ${{ inputs.vmimport-bucket }}
-        id: register-ami
-        name: Register AMI
+      - id: upload-snapshot
+        name: upload snapshot
         run: |
-          set -euo pipefail
           file=$(jq -r '.file' ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json)
-          nix run nixpkgs#coldsnap upload "$file"
+          snapshot_id=$(nix run nixpkgs#coldsnap upload "$file")
+          echo "snapshot-id=$snapshot_id" >> "$GITHUB_OUTPUT"
+      - id: register-image
+        name: Register image
+        run: |
+          label=$(jq -r '.label' ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json)
+          image_id=$(aws ec2 register-image --name "testing/$label" \
+            --virtualization-type hvm \
+            --block-device-mappings "DeviceName=/dev/xvda,Ebs={SnapshotId=${{ steps.upload-snapshot.outputs.snapshot-id }} }" \
+            --architecture x86_64 \
+            --root-device-name /dev/xvda \
+            --query ImageId)
           echo "image-id=$image_id" >> "$GITHUB_OUTPUT"
+
