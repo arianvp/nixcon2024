@@ -52,6 +52,10 @@ jobs:
           set -eu
           set -f 
           export IFS=' '
+          if ! command -v nix; then
+            echo "Nix not found in PATH"
+            exit 0
+          fi
           echo Copying "$OUT_PATHS to ${{ inputs.store-uri }}"
           exec nix copy --to "${{ inputs.store-uri }}" $OUT_PATHS
           EOF
