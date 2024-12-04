@@ -73,8 +73,6 @@ jobs:
         name: Register AMI
         run: |
           set -euo pipefail
-          image_id=$(nix run github:NixOS/amis#upload-ami -- \
-            --s3-bucket "${{ inputs.vmimport-bucket }}" \
-            --prefix "${{ inputs.image-name }}" \
-            --image-info ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json | jq -r '.["${{ inputs.aws-region }}"]')
+          file=$(jq -r '.file' ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json)
+          nix run nixpkgs#coldsnap upload "$file"
           echo "image-id=$image_id" >> "$GITHUB_OUTPUT"
