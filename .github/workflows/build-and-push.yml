@@ -52,9 +52,8 @@ jobs:
           set -eu
           set -f 
           export IFS=' '
-          env
-          echo "Copying $DRV_PATH : $OUT_PATHS to ${{ inputs.store-uri }}"
-          exec /nix/var/nix/profiles/default/bin/nix copy --to "${{ inputs.store-uri }}" $OUT_PATHS
+          echo "Copying \$DRV_PATH : \$OUT_PATHS to ${{ inputs.store-uri }}"
+          exec /nix/var/nix/profiles/default/bin/nix copy --to "${{ inputs.store-uri }}" \$OUT_PATHS
           EOF
           chmod +x /opt/bin/post-build-hook
       - uses: aws-actions/configure-aws-credentials@v4
