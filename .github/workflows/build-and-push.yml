@@ -16,9 +16,9 @@ on:
       role-to-assume:
         required: true
         type: string
-      upload-image:
+      image-name:
         required: false
-        type: boolean
+        type: string
     secrets:
       secret-key:
         required: true
@@ -83,14 +83,14 @@ jobs:
           store_path=$(nix build -L ${{ inputs.installable }} --print-out-paths)
           echo "store-path=$store_path" >> "$GITHUB_OUTPUT"
       - id: upload-snapshot
-        if: ${{ inputs.upload-image }}
+        if: ${{ inputs.image-name }}
         name: upload snapshot
         run: |
           file=$(jq -r '.file' ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json)
           snapshot_id=$(nix run nixpkgs#coldsnap upload -- --wait "$file")
           echo "snapshot-id=$snapshot_id" >> "$GITHUB_OUTPUT"
       - id: register-image
-        if: ${{ inputs.upload-image }}
+        if: ${{ inputs.image-name }}
         name: Register image
         run: |
           label=$(jq -r '.label' ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json)

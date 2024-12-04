@@ -73,7 +73,7 @@ jobs:
       public-key: ${{ vars.NIX_PUBLIC_KEY }}
       store-uri: ${{ vars.NIX_STORE_URI }}
       installable: .#hydraJobs.images.${{ matrix.hosts }}
-      upload-image: true
+      image-name: ${{ matrix.hosts }}
     secrets:
       secret-key: ${{ secrets.NIX_SECRET_KEY }}
   
