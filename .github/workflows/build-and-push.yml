@@ -60,14 +60,6 @@ jobs:
           exec nix copy --to "${{ inputs.store-uri }}" $OUT_PATHS
           EOF
           chmod +x /opt/bin/post-build-hook
-      - uses: DeterminateSystems/nix-installer-action@v16
-        with:
-          extra-conf: |
-            extra-substituters = ${{ inputs.store-uri }}
-            extra-trusted-public-keys = ${{ inputs.public-key }}
-            secret-key-files = ${{ steps.get-cache-secret-key.outputs.secret-key-file }}
-            post-build-hook = /opt/bin/post-build-hook
-
       - uses: aws-actions/configure-aws-credentials@v4
         id: aws
         with:
@@ -81,10 +73,18 @@ jobs:
           sudo aws configure set aws_secret_access_key ${{ steps.aws.outputs.aws-secret-access-key }}
           sudo aws configure set aws_session_token ${{ steps.aws.outputs.aws-session-token }}
           sudo aws configure set region eu-central-1
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            extra-substituters = ${{ inputs.store-uri }}
+            extra-trusted-public-keys = ${{ inputs.public-key }}
+            secret-key-files = ${{ steps.get-cache-secret-key.outputs.secret-key-file }}
+            post-build-hook = /opt/bin/post-build-hook
+
       - id: build-and-push
         name: Build
         run: |
-          store_path=$(nix build ${{ inputs.installable }} --print-out-paths)
+          store_path=$(nix build -L ${{ inputs.installable }} --print-out-paths)
           echo "store-path=$store_path" >> "$GITHUB_OUTPUT"
       - id: upload-snapshot
         if: ${{ inputs.upload-image }}
