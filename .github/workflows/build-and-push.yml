@@ -52,7 +52,7 @@ jobs:
           set -eu
           set -f 
           export IFS=' '
-          echo Copying "$OUT_PATHS to ${{ inputs.store-uri }}"
+          echo "Copying $DRV_PATH : $OUT_PATHS to ${{ inputs.store-uri }}"
           exec /nix/var/nix/profiles/default/bin/nix copy --to "${{ inputs.store-uri }}" $OUT_PATHS
           EOF
           chmod +x /opt/bin/post-build-hook
