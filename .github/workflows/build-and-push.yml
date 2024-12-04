@@ -62,7 +62,7 @@ jobs:
             extra-substituters = ${{ inputs.store-uri }}
             extra-trusted-public-keys = ${{ inputs.public-key }}
             secret-key-files = ${{ steps.get-cache-secret-key.outputs.secret-key-file }}
-            post-build-hook = /nix/var/nix/post-build-hook
+            post-build-hook = /opt/bin/post-build-hook
 
       - uses: aws-actions/configure-aws-credentials@v4
         id: aws
