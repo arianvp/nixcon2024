@@ -27,7 +27,12 @@
         nixpkgs.lib.mapAttrs (name: config: config.config.system.build.toplevel)
         self.nixosConfigurations;
       images = nixpkgs.lib.mapAttrs
-        (name: config: config.config.system.build.amazonImage)
+        (name: config: config.config.system.build.amazonImage.overrideAttrs
+          (oldAttrs: {
+            __structuredAttrs = true;
+            # No point in keeping the closure of an image. It's self-contained
+            unsafeDiscardReferences = true;
+          }))
         self.nixosConfigurations;
     };
 
