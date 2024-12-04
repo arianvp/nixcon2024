@@ -38,11 +38,30 @@ jobs:
       image-id: ${{ steps.register-image.outputs.image-id }}
     steps:
       - uses: actions/checkout@v4
+      - id: get-cache-secret-key
+        name: Get cache secret key
+        run: |
+          secret_key_file=$(mktemp)
+          echo "${{ secrets.secret-key }}" > "$secret_key_file"
+          echo "secret-key-file=$secret_key_file" >> "$GITHUB_OUTPUT"
+      - name: Write post-build-hook
+        run: |
+          cat <<EOF > /nix/var/nix/post-build-hook
+          #!/bin/sh
+          set -eu
+          set -f 
+          export IFS=' '
+          echo Copying "$OUT_PATHS to ${{ inputs.store-uri }}"
+          exec nix copy --to "${{ inputs.store-uri }}" $OUT_PATHS
+          EOF
+          chmod +x /nix/var/nix/post-build-hook
       - uses: DeterminateSystems/nix-installer-action@v16
         with:
           extra-conf: |
             extra-substituters = ${{ inputs.store-uri }}
             extra-trusted-public-keys = ${{ inputs.public-key }}
+            secret-key-files = ${{ steps.get-cache-secret-key.outputs.secret-key-file }}
+            post-build-hook = /nix/var/nix/post-build-hook
 
       - uses: aws-actions/configure-aws-credentials@v4
         id: aws
@@ -57,20 +76,10 @@ jobs:
           sudo aws configure set aws_secret_access_key ${{ steps.aws.outputs.aws-secret-access-key }}
           sudo aws configure set aws_session_token ${{ steps.aws.outputs.aws-session-token }}
           sudo aws configure set region eu-central-1
-      - id: get-cache-secret-key
-        name: Get cache secret key
-        run: |
-          secret_key_file=$(mktemp)
-          echo "${{ secrets.secret-key }}" > "$secret_key_file"
-          echo "secret-key-file=$secret_key_file" >> "$GITHUB_OUTPUT"
       - id: build-and-push
         name: Build
         run: |
-          # if ! nix path-info --eval-store auto --store "${{ inputs.store-uri }}" ${{ inputs.installable }}; then
           store_path=$(nix build ${{ inputs.installable }} --print-out-paths)
-          nix store sign --recursive --key-file ${{ steps.get-cache-secret-key.outputs.secret-key-file }} "$store_path"
-          nix copy --eval-store auto --to "${{ inputs.store-uri }}" "$store_path"
-          # fi
           echo "store-path=$store_path" >> "$GITHUB_OUTPUT"
       - id: upload-snapshot
         if: ${{ inputs.upload-image }}
@@ -84,7 +93,7 @@ jobs:
         name: Register image
         run: |
           label=$(jq -r '.label' ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json)
-          image_id=$(aws ec2 register-image --name "testing/$label" \
+          image_id=$(aws ec2 register-image --name "${{ inputs.image-name }} /$label" \
             --virtualization-type hvm \
             --block-device-mappings "DeviceName=/dev/xvda,Ebs={SnapshotId=${{ steps.upload-snapshot.outputs.snapshot-id }} }" \
             --architecture x86_64 \
