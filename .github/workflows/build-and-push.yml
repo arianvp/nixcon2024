@@ -38,7 +38,11 @@ jobs:
       image-id: ${{ steps.register-ami.outputs.image-id }}
     steps:
       - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@v14
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            always-allow-substitutes = true
+
       - uses: aws-actions/configure-aws-credentials@v4
         id: aws
         with:
