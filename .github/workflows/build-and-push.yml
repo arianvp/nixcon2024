@@ -53,7 +53,6 @@ jobs:
           set -f 
           export IFS=' '
           if [ ! -f /nix/var/nix/profiles/default/bin/nix ]; then
-            echo "Nix not found in the store"
             exit 0
           fi
           exec /nix/var/nix/profiles/default/bin/nix copy --to "${{ inputs.store-uri }}" \$OUT_PATHS
@@ -97,7 +96,7 @@ jobs:
         name: Register image
         run: |
           label=$(jq -r '.label' ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json)
-          image_id=$(aws ec2 register-image --name "${{ inputs.image-name }} /$label" \
+          image_id=$(aws ec2 register-image --name "${{ inputs.image-name }}/$label" \
             --virtualization-type hvm \
             --block-device-mappings "DeviceName=/dev/xvda,Ebs={SnapshotId=${{ steps.upload-snapshot.outputs.snapshot-id }} }" \
             --architecture x86_64 \
