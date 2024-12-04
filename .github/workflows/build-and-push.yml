@@ -52,7 +52,10 @@ jobs:
           set -eu
           set -f 
           export IFS=' '
-          echo "Copying \$DRV_PATH : \$OUT_PATHS to ${{ inputs.store-uri }}"
+          if [ ! -f /nix/var/nix/profiles/default/bin/nix ]; then
+            echo "Nix not found in the store"
+            exit 0
+          fi
           exec /nix/var/nix/profiles/default/bin/nix copy --to "${{ inputs.store-uri }}" \$OUT_PATHS
           EOF
           chmod +x /opt/bin/post-build-hook
