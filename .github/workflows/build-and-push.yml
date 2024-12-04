@@ -46,7 +46,8 @@ jobs:
           echo "secret-key-file=$secret_key_file" >> "$GITHUB_OUTPUT"
       - name: Write post-build-hook
         run: |
-          cat <<EOF > /nix/var/nix/post-build-hook
+          mkdir -p /opt/bin
+          cat <<EOF > /opt/bin/post-build-hook
           #!/bin/sh
           set -eu
           set -f 
@@ -54,7 +55,7 @@ jobs:
           echo Copying "$OUT_PATHS to ${{ inputs.store-uri }}"
           exec nix copy --to "${{ inputs.store-uri }}" $OUT_PATHS
           EOF
-          chmod +x /nix/var/nix/post-build-hook
+          chmod +x /opt/bin/post-build-hook
       - uses: DeterminateSystems/nix-installer-action@v16
         with:
           extra-conf: |
