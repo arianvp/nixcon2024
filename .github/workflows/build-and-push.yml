@@ -7,18 +7,18 @@ on:
       store-uri:
         required: true
         type: string
+      public-key:
+        required: true
+        type: string
       aws-region:
         required: true
         type: string
       role-to-assume:
         required: true
         type: string
-      image-name:
+      upload-image:
         required: false
-        type: string
-      vmimport-bucket:
-        required: false
-        type: string
+        type: boolean
     secrets:
       secret-key:
         required: true
@@ -35,13 +35,13 @@ jobs:
       id-token: write
     outputs:
       store-path: ${{ steps.build-and-push.outputs.store-path }}
-      image-id: ${{ steps.register-ami.outputs.image-id }}
+      image-id: ${{ steps.register-image.outputs.image-id }}
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v16
         with:
           extra-conf: |
-            always-allow-substitutes = true
+            extra-substituters = ${{ inputs.store-uri }}
 
       - uses: aws-actions/configure-aws-credentials@v4
         id: aws
@@ -66,19 +66,20 @@ jobs:
         name: Build
         run: |
           # if ! nix path-info --eval-store auto --store "${{ inputs.store-uri }}" ${{ inputs.installable }}; then
-          nix build ${{ inputs.installable }}
-          nix store sign --recursive --key-file ${{ steps.get-cache-secret-key.outputs.secret-key-file }}  ${{ inputs.installable }}
-          nix copy --eval-store auto --to "${{ inputs.store-uri }}" ${{ inputs.installable }}
+          store_path=$(nix build ${{ inputs.installable }} --print-out-paths)
+          nix store sign --recursive --key-file ${{ steps.get-cache-secret-key.outputs.secret-key-file }} "$store_path"
+          nix copy --eval-store auto --to "${{ inputs.store-uri }}" "$store_path"
           # fi
-          store_path=$(nix path-info --eval-store auto --store "${{ inputs.store-uri }}" ${{ inputs.installable }})
           echo "store-path=$store_path" >> "$GITHUB_OUTPUT"
       - id: upload-snapshot
+        if: ${{ inputs.upload-image }}
         name: upload snapshot
         run: |
           file=$(jq -r '.file' ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json)
-          snapshot_id=$(nix run nixpkgs#coldsnap upload "$file")
+          snapshot_id=$(nix run nixpkgs#coldsnap upload --wait "$file")
           echo "snapshot-id=$snapshot_id" >> "$GITHUB_OUTPUT"
       - id: register-image
+        if: ${{ inputs.upload-image }}
         name: Register image
         run: |
           label=$(jq -r '.label' ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json)
