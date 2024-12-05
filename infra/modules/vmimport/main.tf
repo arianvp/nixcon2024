@@ -104,6 +104,18 @@ resource "aws_iam_policy" "write" {
           "ec2:EnableImageDeprecation"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "ebs:StartSnapshot",
+          "ebs:PutSnapshotBlock",
+          "ebs:CompleteSnapshot",
+          "ebs:ListSnapshotBlocks",
+          "ebs:ListChangedBlocks",
+          "ebs:GetSnapshotBlock"
+        ]
+        Resource = "*"
       }
     ]
   })

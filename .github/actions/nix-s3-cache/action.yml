@@ -1,0 +1,8 @@
+name: Nix S3 Cache
+description: 'Cache nix store in S3'
+inputs:
+  bucket: 
+    description: 'The S3 bucket to cache the nix store in'
+    required: true
+runs:
+  using: 'composite'

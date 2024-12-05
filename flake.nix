@@ -23,8 +23,12 @@
     });
 
     hydraJobs = {
-      toplevels = nixpkgs.lib.mapAttrs (name: config: config.config.system.build.toplevel) self.nixosConfigurations;
-      images = nixpkgs.lib.mapAttrs (name: config: config.config.system.build.amazonImage) self.nixosConfigurations;
+      toplevels =
+        nixpkgs.lib.mapAttrs (name: config: config.config.system.build.toplevel)
+        self.nixosConfigurations;
+      images = nixpkgs.lib.mapAttrs
+        (name: config: config.config.system.build.amazonImage)
+        self.nixosConfigurations;
     };
 
     nixosConfigurations = let
@@ -34,7 +38,10 @@
         lib.nixosSystem {
           modules = [
             "${nixpkgs}/nixos/maintainers/scripts/ec2/amazon-image.nix"
-            { amazonImage.sizeMB = "auto"; }
+            {
+              amazonImage.sizeMB = "auto";
+              amazonImage.format = "raw";
+            }
             { system.name = name; }
             ./nix/hosts/${name}
           ];

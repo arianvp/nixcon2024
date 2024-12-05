@@ -7,6 +7,9 @@ on:
       store-uri:
         required: true
         type: string
+      public-key:
+        required: true
+        type: string
       aws-region:
         required: true
         type: string
@@ -14,9 +17,6 @@ on:
         required: true
         type: string
       image-name:
-        required: false
-        type: string
-      vmimport-bucket:
         required: false
         type: string
     secrets:
@@ -35,10 +35,29 @@ jobs:
       id-token: write
     outputs:
       store-path: ${{ steps.build-and-push.outputs.store-path }}
-      image-id: ${{ steps.register-ami.outputs.image-id }}
+      image-id: ${{ steps.register-image.outputs.image-id }}
     steps:
       - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@v14
+      - id: get-cache-secret-key
+        name: Get cache secret key
+        run: |
+          secret_key_file=$(mktemp)
+          echo "${{ secrets.secret-key }}" > "$secret_key_file"
+          echo "secret-key-file=$secret_key_file" >> "$GITHUB_OUTPUT"
+      - name: Write post-build-hook
+        run: |
+          mkdir -p /opt/bin
+          cat <<EOF > /opt/bin/post-build-hook
+          #!/bin/sh
+          set -eu
+          set -f 
+          export IFS=' '
+          if [ ! -f /nix/var/nix/profiles/default/bin/nix ]; then
+            exit 0
+          fi
+          exec /nix/var/nix/profiles/default/bin/nix copy --to "${{ inputs.store-uri }}" \$OUT_PATHS
+          EOF
+          chmod +x /opt/bin/post-build-hook
       - uses: aws-actions/configure-aws-credentials@v4
         id: aws
         with:
@@ -52,29 +71,36 @@ jobs:
           sudo aws configure set aws_secret_access_key ${{ steps.aws.outputs.aws-secret-access-key }}
           sudo aws configure set aws_session_token ${{ steps.aws.outputs.aws-session-token }}
           sudo aws configure set region eu-central-1
-      - id: get-cache-secret-key
-        name: Get cache secret key
-        run: |
-          secret_key_file=$(mktemp)
-          echo "${{ secrets.secret-key }}" > "$secret_key_file"
-          echo "secret-key-file=$secret_key_file" >> "$GITHUB_OUTPUT"
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            extra-substituters = ${{ inputs.store-uri }}
+            extra-trusted-public-keys = ${{ inputs.public-key }}
+            secret-key-files = ${{ steps.get-cache-secret-key.outputs.secret-key-file }}
+            post-build-hook = /opt/bin/post-build-hook
+
       - id: build-and-push
         name: Build
         run: |
-          # if ! nix path-info --eval-store auto --store "${{ inputs.store-uri }}" ${{ inputs.installable }}; then
-          nix build ${{ inputs.installable }}
-          nix store sign --recursive --key-file ${{ steps.get-cache-secret-key.outputs.secret-key-file }}  ${{ inputs.installable }}
-          nix copy --eval-store auto --to "${{ inputs.store-uri }}" ${{ inputs.installable }}
-          # fi
-          store_path=$(nix path-info --eval-store auto --store "${{ inputs.store-uri }}" ${{ inputs.installable }})
+          store_path=$(nix build -L ${{ inputs.installable }} --print-out-paths)
           echo "store-path=$store_path" >> "$GITHUB_OUTPUT"
-      - if: ${{ inputs.vmimport-bucket }}
-        id: register-ami
-        name: Register AMI
+      - id: upload-snapshot
+        if: ${{ inputs.image-name }}
+        name: upload snapshot
         run: |
-          set -euo pipefail
-          image_id=$(nix run github:NixOS/amis#upload-ami -- \
-            --s3-bucket "${{ inputs.vmimport-bucket }}" \
-            --prefix "${{ inputs.image-name }}" \
-            --image-info ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json | jq -r '.["${{ inputs.aws-region }}"]')
+          file=$(jq -r '.file' ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json)
+          snapshot_id=$(VERBOSE=true nix run nixpkgs#coldsnap -- --verbose upload --wait "$file")
+          echo "snapshot-id=$snapshot_id" >> "$GITHUB_OUTPUT"
+      - id: register-image
+        if: ${{ inputs.image-name }}
+        name: Register image
+        run: |
+          label=$(jq -r '.label' ${{ steps.build-and-push.outputs.store-path }}/nix-support/image-info.json)
+          image_id=$(aws ec2 register-image --name "${{ inputs.image-name }}/$label" \
+            --virtualization-type hvm \
+            --block-device-mappings "DeviceName=/dev/xvda,Ebs={SnapshotId=${{ steps.upload-snapshot.outputs.snapshot-id }} }" \
+            --architecture x86_64 \
+            --root-device-name /dev/xvda \
+            --query ImageId)
           echo "image-id=$image_id" >> "$GITHUB_OUTPUT"
+
