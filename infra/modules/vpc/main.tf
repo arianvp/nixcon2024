@@ -194,13 +194,13 @@ resource "aws_route" "egress_ipv6" {
   destination_ipv6_cidr_block = "::/0"
 }
 
-resource "aws_eip" "nat_gateway" {
+/*resource "aws_eip" "nat_gateway" {
   tags = {
     Name = "${var.name}-eip"
   }
-}
+}*/
 
-resource "aws_nat_gateway" "this" {
+/*resource "aws_nat_gateway" "this" {
   subnet_id     = aws_subnet.public["eu-central-1a"].id
   allocation_id = aws_eip.nat_gateway.id
   tags = {
@@ -213,6 +213,7 @@ resource "aws_route" "egress_ipv4" {
   nat_gateway_id         = aws_nat_gateway.this.id
   destination_cidr_block = "0.0.0.0/0"
 }
+*/
 
 /*resource "aws_vpc_endpoint" "ssm" {
   for_each          = toset(["ssm", "ssmmessages", "ec2messages"])
