@@ -1029,8 +1029,6 @@ SPEAKER:
 
 ## Use AWS and NixOS? Talk to me!
 
-<img src="matrix.png" width="200">
-
 * Join our matrix [`#aws:nixos.org`](https://matrix.to/#/#aws:nixos.org)
 * https://github.com/nixos/amis
 * https://github.com/MercuryTechnologies/terraform-aws-ssm-nixos-deploy-document
