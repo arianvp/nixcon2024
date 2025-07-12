@@ -718,7 +718,7 @@ SPEAKER:
 * Published as terraform module
 ```
 module "nixos_deploy_ssm_document" {
-  source = "modules/nixos_deploy_ssm_document"
+  source = "github.com/MercuryTechnologies/aws-ssm-update-association-action"
 }
 ```
 
@@ -1033,8 +1033,9 @@ SPEAKER:
 
 * Join our matrix [`#aws:nixos.org`](https://matrix.to/#/#aws:nixos.org)
 * https://github.com/nixos/amis
-
-* https://github.com/arianvp/nixcon2024 
+* https://github.com/MercuryTechnologies/terraform-aws-ssm-nixos-deploy-document
+* https://github.com/MercuryTechnologies/aws-ssm-update-association-action
+* https://github.com/MercuryTechnologies/aws-ssm-send-command-action
 
 
 ---
