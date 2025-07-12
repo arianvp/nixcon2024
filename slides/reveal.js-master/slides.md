@@ -5,7 +5,7 @@
 ## Me
 
 * Arian van Putten (`@arianvp`)
-* NixOS maintainer (ACME, infra team, moderation team, aws team)
+* NixOS maintainer (systemd, infra, moderation, aws)
 * Infra @ Mercury.com
 
 ---
