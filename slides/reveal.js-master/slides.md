@@ -49,14 +49,14 @@ SPEAKER:
 
 ![deploy](deploy.drawio.svg)
 
-SPEAKER: 
+SPEAKER:
 
 * Artifacts built twice in GHA and Hydra
 * Separate repos for app and infra
 * Infra tracks different nixpkgs than backend
 * Hard to track deploy status for engineers
 * New instances manually added to inventory
-* Bastion host and key management for ssh access 
+* Bastion host and key management for ssh access
 * Kernel updates and NixOS upgrades  coordination
 * Setting up new instances tedious due to old AMI. Requires reboot
 
@@ -222,7 +222,7 @@ resource "aws_auto_scaling_group" "webserver" {
 }
 ```
 
-SPEAKER: 
+SPEAKER:
 
 * Define availability zones (Subnets)
 * Attach to load balancer
@@ -377,7 +377,7 @@ TF_VAR_image_id=ami-7654321098abcdef0 terraform apply
 ~ resource "aws_launch_template" "webserver" {
       id                      = "lt-0945d5011bf2bb1d7"
     ~ latest_version          = 4 -> (known after apply)
-    ~ image_id                = "ami-1234567890abcdef0" -> 
+    ~ image_id                = "ami-1234567890abcdef0" ->
         "ami-7654321098abcdef0"
   }
 ```
@@ -511,7 +511,7 @@ SPEAKER:
 
 ---
 
-## Terraform module 
+## Terraform module
 
 <pre><code data-trim data-line-numbers="8">
 module "nix_cache_bucket" { source = "./modules/nix_cache_bucket" }
@@ -565,7 +565,7 @@ TF_VAR_nix_store_path=$store_path terraform apply
     ~ latest_version          = 4 -> (known after apply)
     ~ tag_specifications {
         ~ tags          = {
-            ~ "Installable" = "/nix/store/g1blfd8wjmwl050h08r2crmg8c1sfhd6-nixos-system-webserver-24.11.20240929.06cf0e1" 
+            ~ "Installable" = "/nix/store/g1blfd8wjmwl050h08r2crmg8c1sfhd6-nixos-system-webserver-24.11.20240929.06cf0e1"
             -> "/nix/store/p6b3p154bsc7w13w92jqpvgwk8xyci86-nixos-system-webserver-24.11.20240929.06cf0e1"
           }
       }
@@ -665,7 +665,7 @@ SPEAKER:
 
 ---
 
-## AWS Systems Manager 
+## AWS Systems Manager
 
 * agent shipped with NixOS since 24.05
 * Remote access for admins
@@ -677,7 +677,7 @@ SPEAKER:
 
 ![ssm](ssm.drawio.svg)
 
-SPEAKER: 
+SPEAKER:
 
 * Instances can be in private subnet
 * No need for bastion host
@@ -887,7 +887,7 @@ SPEAKER:
 },
 "Condition": {
   "StringEquals": {
-    "token.actions.githubusercontent.com:aud": 
+    "token.actions.githubusercontent.com:aud":
       "sts.amazonaws.com",
     "token.actions.githubusercontent.com:sub":
       "repo:arianvp/nixcon2024:pull_request"
@@ -899,7 +899,7 @@ SPEAKER:
 
 * Trust policy defines who can assume the role under what conditions
 * If Signed by Github
-* If target audience is AWS 
+* If target audience is AWS
 * If request came from a pull request
 ---
 
@@ -925,7 +925,7 @@ resource "aws_iam_role_policy_attachment" "write" {
 <pre class="yaml"><code data-trim data-line-numbers="7,9">
 build:
   permissions:
-    id-token: write 
+    id-token: write
   steps:
     - uses: aws-actions/configure-aws-credentials@v14
       aws-region: eu-central-1
@@ -1020,10 +1020,54 @@ SPEAKER:
 
 ## Conclusion
 
-* Unified CI and CD pipeline, visibility for developers
+* Unified CI and CD pipeline, visibility for developersk
 * Secure rollout at scale using auto scaling groups and AWS SSM
 * Strong cryptographic identity using Github Actions ID tokens and IAM Roles
 * **No credentials or secrets to manage at all**
+
+---
+
+## Future of NixOS at Mercury if we're moving to containers?
+
+* Handling PCI-DSS data requires stringent data controls
+* [AWS EC2 Instance Attestation](https://aws.amazon.com/about-aws/whats-new/2025/09/aws-announces-ec2-instance-attestation/)
+* AWS Nitro Secure Enclaves
+
+---
+
+## AWS EC2 Instance Attestation
+
+<img src="attestable-amis.png" width="70%">
+
+---
+
+## AWS EC2 Instance Attestation
+
+<pre><code data-language="nix" data-trim >
+{
+  description = "Confidential Cards processor";
+  inputs.nitro-tee.url = "github:aws/nitrotpm-attestation-samples/nix";
+  outputs = { nixpkgs, nitro-tee, ... }: {
+    cards-processor = nitro-tee.lib.aarch64-linux.tee-image {
+      userConfig = { pkgs, ... }: {
+        systemd.services.cards-processor = {
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig.ExecStart = [
+          "${pkgs.mwb/bin/cards-processor"
+          "--kms-key-id"
+          "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+        ];
+      };
+    };
+  };
+}
+</code>
+</pre>
+
+---
+## AWS EC2 Instance Attestation
+<img src="uki.png" width="400px">
+
 
 ---
 
