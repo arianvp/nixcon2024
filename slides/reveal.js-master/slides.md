@@ -26,7 +26,7 @@ SPEAKER:
 
 ---
 
-## Deploys a year ago
+## Deploys during the dark times
 
 ![deploy](deploy.drawio.svg)
 
