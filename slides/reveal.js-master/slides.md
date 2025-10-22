@@ -147,27 +147,6 @@ SPEAKER:
 
 ---
 
-## Image Build and Upload Automation
-
-* AMIs were only uploaded once per release. Manual process
-* Outdated kernels and security vulnerabilities on first boot
-* NixOS release managers had no interest in maintaining AWS support. too much toil.
-
----
-
-## Image Build and Upload automation
-
-* Since 24.05 AMIs are now maintained again!
-* Automated weekly upload using Github Actions
-
-SPEAKER:
-
-* Took over maintance of AWS support in NixOS
-* Built a github actions pipeline to build and upload NixOS AMIs regularly
-* AMIs now uploaded for every channel bump since 24.05
-
----
-
 ## Image build and Upload Automation
 
 
