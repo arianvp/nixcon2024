@@ -1031,15 +1031,21 @@ SPEAKER:
 
 * Handling PCI-DSS data requires stringent data controls
 * Confidential Compute is great fo this
+* EC2 supports confidential compute with NixOS (actually only supported platform atm!)
+
+---
+
+## AWS EC2 Instance Attestation
+
 * [AWS EC2 Instance Attestation](https://aws.amazon.com/about-aws/whats-new/2025/09/aws-announces-ec2-instance-attestation/)
-* [How Monzo Bank uses Nix Secure Enclaves](https://monzo.com/blog/securing-our-software-supply-chain-better-with-reproducible-builds-for)
-* AWS Nitro Secure Enclaves
+* [How Monzo Bank uses Nix and AWS Nitro Secure Enclaves](https://monzo.com/blog/securing-our-software-supply-chain-better-with-reproducible-builds-for)
 
 ---
 
 ## AWS EC2 Instance Attestation
 
 <img src="attestable-amis.png" width="70%">
+
 
 ---
 
@@ -1067,30 +1073,8 @@ SPEAKER:
 </pre>
 
 ---
+
 ## AWS EC2 Instance Attestation
 <img src="uki.png" width="400px">
 
----
 
-## Use AWS and NixOS? Talk to me!
-
-* Join our matrix [`#aws:nixos.org`](https://matrix.to/#/#aws:nixos.org)
-* https://github.com/nixos/amis
-* https://github.com/MercuryTechnologies/terraform-aws-ssm-nixos-deploy-document
-* https://github.com/MercuryTechnologies/aws-ssm-update-association-action
-* https://github.com/MercuryTechnologies/aws-ssm-send-command-action
-
-
----
-
-## Future work
-* Want to bring more AWS improvements to NixOS
-* Better image builder tooling using systemd-repart
-* Repartitioning root volume
-* Lifecycle hooks for autoscaling groups
-* SecureBoot?
-* CloudWatch logging
-
----
-
-## Questions ?
