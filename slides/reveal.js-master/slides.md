@@ -1030,7 +1030,9 @@ SPEAKER:
 ## Future of NixOS at Mercury if we're moving to containers?
 
 * Handling PCI-DSS data requires stringent data controls
+* Confidential Compute is great fo this
 * [AWS EC2 Instance Attestation](https://aws.amazon.com/about-aws/whats-new/2025/09/aws-announces-ec2-instance-attestation/)
+* [How Monzo Bank uses Nix Secure Enclaves](https://monzo.com/blog/securing-our-software-supply-chain-better-with-reproducible-builds-for)
 * AWS Nitro Secure Enclaves
 
 ---
@@ -1067,7 +1069,6 @@ SPEAKER:
 ---
 ## AWS EC2 Instance Attestation
 <img src="uki.png" width="400px">
-
 
 ---
 
